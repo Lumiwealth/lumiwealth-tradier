@@ -1,16 +1,14 @@
 import pandas as pd
-import requests
 
-from .base import Tradier
+from .base import TradierApiBase
 
 
-class Account(Tradier):
-    def __init__(self, account_number, auth_token):
-        Tradier.__init__(self, account_number, auth_token)
+class Account(TradierApiBase):
+    def __init__(self, account_number, auth_token, is_paper=True):
+        TradierApiBase.__init__(self, account_number, auth_token, is_paper)
 
         # Account endpoints
         self.PROFILE_ENDPOINT = "v1/user/profile"  # GET
-        self.POSITIONS_ENDPOINT = f"v1/accounts/{account_number}/positions"  # GET
         self.ACCOUNT_BALANCE_ENDPOINT = f"v1/accounts/{account_number}/balances"  # GET
         self.ACCOUNT_GAINLOSS_ENDPOINT = f"v1/accounts/{account_number}/gainloss"  # GET
         self.ACCOUNT_HISTORY_ENDPOINT = f"v1/accounts/{account_number}/history"  # GET
@@ -47,13 +45,8 @@ class Account(Tradier):
             account.type                   	margin
             account.last_update_date 		2021-06-23T22:04:20.000Z
         """
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.PROFILE_ENDPOINT}',
-            params={},
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return pd.json_normalize(r.json()['profile'])
+        data = self.request(endpoint=self.PROFILE_ENDPOINT)
+        return pd.json_normalize(data['profile'])
 
     def get_account_balance(self):
         """
@@ -99,13 +92,8 @@ class Account(Tradier):
             margin.stock_short_value       0
             margin.sweep                   0
         """
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.ACCOUNT_BALANCE_ENDPOINT}',
-            params={},
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return pd.json_normalize(r.json()['balances'])
+        data = self.request(endpoint=self.ACCOUNT_BALANCE_ENDPOINT)
+        return pd.json_normalize(data['balances'])
 
     def get_gainloss(self):
         """
@@ -127,13 +115,8 @@ class Account(Tradier):
                 3  2023-09-13T00:00:00.000Z   20700.0     1620.0    7.83   22320.0    9.0  H AL251219C00018000    20
                 4  2023-09-06T00:00:00.000Z   16967.0     -193.0   -1.14   16774.0    100.0                TXN     5
         """
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.ACCOUNT_GAINLOSS_ENDPOINT}',
-            params={},
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return pd.json_normalize(r.json()['gainloss']['closed_position'])
+        data = self.request(endpoint=self.ACCOUNT_GAINLOSS_ENDPOINT)
+        return pd.json_normalize(data['gainloss']['closed_position'])
 
     def get_orders(self):
         """
@@ -162,17 +145,12 @@ class Account(Tradier):
             transaction_date    2023-09-26T12:30:19.152Z  2023-09-26T14:45:00.216Z
             class                                 equity                    equity
         """
-
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.ORDER_ENDPOINT}',
-            params={'includeTags': 'true'},
-            headers=self.REQUESTS_HEADERS
-        )
-
-        if r.json()['orders'] == 'null':
+        data = self.request(endpoint=self.ORDER_ENDPOINT)
+        # TODO: Better error handling for empty orders
+        if data['orders'] == 'null':
             return 'You have no current orders.'
 
-        return pd.json_normalize(r.json()['orders']['order'])
+        return pd.json_normalize(data['orders']['order'])
 
     def get_positions(self, symbols=False, equities=False, options=False):
         """
@@ -210,10 +188,9 @@ class Account(Tradier):
             # Retrieve only options
             options_positions = get_positions(options=True)
         """
-        r = requests.get(url=f'{self.SANDBOX_URL}/{self.ACCOUNT_POSITIONS_ENDPOINT}', params={},
-                         headers=self.REQUESTS_HEADERS)
-        if r.json():
-            positions_df = pd.DataFrame(r.json()['positions']['position'])
+        data = self.request(endpoint=self.ACCOUNT_POSITIONS_ENDPOINT)
+        if data:
+            positions_df = pd.DataFrame(data['positions']['position'])
             if symbols:
                 positions_df = positions_df.query('symbol in @symbols')
             if equities:

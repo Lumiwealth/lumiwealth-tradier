@@ -1,11 +1,9 @@
-import requests
-
-from .base import Tradier
+from .base import TradierApiBase
 
 
-class EquityOrder(Tradier):
-    def __init__(self, account_number, auth_token):
-        Tradier.__init__(self, account_number, auth_token)
+class EquityOrder(TradierApiBase):
+    def __init__(self, account_number, auth_token, is_paper=True):
+        TradierApiBase.__init__(self, account_number, auth_token, is_paper)
 
         # Order endpoint
         self.ORDER_ENDPOINT = f"v1/accounts/{self.ACCOUNT_NUMBER}/orders"  # POST
@@ -24,7 +22,7 @@ class EquityOrder(Tradier):
             {'order': {'id': 8256590, 'status': 'ok', 'partner_id': '3a8bbee1-5184-4ffe-8a0c-294fbad1aee9'}}
       """
         # Define initial requests parameters dictionary whose fields are applicable to all order_type values
-        r_params = {
+        params = {
             'class': 'equity',
             'symbol': symbol,
             'side': side,
@@ -35,14 +33,9 @@ class EquityOrder(Tradier):
 
         # If the order_type is limit, stop, or stop_limit --> Set the appropriate limit price or stop price
         if order_type.lower() in ['limit', 'stop_limit']:
-            r_params['price'] = limit_price
+            params['price'] = limit_price
         if order_type.lower() in ['stop', 'stop_limit']:
-            r_params['stop'] = stop_price
+            params['stop'] = stop_price
 
-        r = requests.post(
-            url=f'{self.SANDBOX_URL}/{self.ORDER_ENDPOINT}',
-            params=r_params,
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return r.json()
+        data = self.send(self.ORDER_ENDPOINT, data=params)
+        return data

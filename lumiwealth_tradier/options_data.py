@@ -1,15 +1,14 @@
-import datetime
+import datetime as dt
 import re
 
 import pandas as pd
-import requests
 
-from .base import Tradier
+from .base import TradierApiBase
 
 
-class OptionsData(Tradier):
-    def __init__(self, account_number, auth_token):
-        Tradier.__init__(self, account_number, auth_token)
+class OptionsData(TradierApiBase):
+    def __init__(self, account_number, auth_token, is_paper=True):
+        TradierApiBase.__init__(self, account_number, auth_token, is_paper)
 
         # Option data endpoints
         self.OPTIONS_STRIKE_ENDPOINT = "v1/markets/options/strikes"  # GET
@@ -27,13 +26,11 @@ class OptionsData(Tradier):
             expiry = self.get_expiry_dates(symbol)[0]
 
         # Define request object for given symbol and expiration
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.OPTIONS_CHAIN_ENDPOINT}',
-            params={'symbol': symbol, 'expiration': expiry, 'greeks': 'false'},
-            headers=self.REQUESTS_HEADERS
-        )
+        params = {'symbol': symbol, 'expiration': expiry, 'greeks': 'false'}
+        data = self.request(self.OPTIONS_CHAIN_ENDPOINT, params=params)
+
         # Convert returned json -> pandas dataframe
-        option_df = pd.DataFrame(r.json()['options']['option'])
+        option_df = pd.DataFrame(data['options']['option'])
 
         # Remove columns which have the same value for every row
         cols_to_drop = option_df.nunique()[option_df.nunique() == 1].index
@@ -70,38 +67,31 @@ class OptionsData(Tradier):
     def get_expiry_dates(self, symbol, strikes=False):
         # noinspection GrazieInspection
         """
-                Get the expiry dates for options on a given symbol.
+        Get the expiry dates for options on a given symbol.
 
-                Args:
-                    symbol (str): The symbol for which to retrieve expiry dates.
-                    strikes (bool, optional): Whether to include strike prices for each expiry date. Defaults to False.
+        Args:
+            symbol (str): The symbol for which to retrieve expiry dates.
+            strikes (bool, optional): Whether to include strike prices for each expiry date. Defaults to False.
 
-                Returns:
-                    If strikes=False 	-> returns list or list of dict: A list of expiry dates in the
-                                            format 'YYYY-MM-DD'.
-                    If strikes=True 	-> returns a list of dictionaries with expiry date and associated strike prices.
+        Returns:
+            If strikes=False 	-> returns list or list of dict: A list of expiry dates in the
+                                    format 'YYYY-MM-DD'.
+            If strikes=True 	-> returns a list of dictionaries with expiry date and associated strike prices.
 
-                Example:
-                    >>> options = OptionsData('ACCOUNT_NUMBER', 'AUTH_TOKEN')
-                    >>> options.get_expiry_dates(symbol='DFS')
-                    ['2023-09-08', '2023-09-15', '2023-09-22', '2023-09-29', '2023-10-06', '2023-10-13', '2023-10-20',
-                    '2023-11-17', '2024-01-19', '2024-04-19', '2024-06-21', '2025-01-17']
+        Example:
+            >>> options = OptionsData('ACCOUNT_NUMBER', 'AUTH_TOKEN')
+            >>> options.get_expiry_dates(symbol='DFS')
+            ['2023-09-08', '2023-09-15', '2023-09-22', '2023-09-29', '2023-10-06', '2023-10-13', '2023-10-20',
+            '2023-11-17', '2024-01-19', '2024-04-19', '2024-06-21', '2025-01-17']
 
-                    >>> options.get_expiry_dates(symbol='DFS', strikes=True)
-                    [{'date': '2023-09-08', 'strikes': {'strike': [59.0, 60.0, 61.0, ...]}, {'date': '2023-09-15',
-                    'strikes': {'strike': [55.0, 60.0, ...}}, ...]
-                """
+            >>> options.get_expiry_dates(symbol='DFS', strikes=True)
+            [{'date': '2023-09-08', 'strikes': {'strike': [59.0, 60.0, 61.0, ...]}, {'date': '2023-09-15',
+            'strikes': {'strike': [55.0, 60.0, ...}}, ...]
+        """
 
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.OPTIONS_EXPIRY_ENDPOINT}',
-            params={'symbol': symbol, 'includeAllRoots': True, 'strikes': str(strikes)},
-            headers=self.REQUESTS_HEADERS
-        )
-
-        if r.status_code != 200:
-            return 'wtf'
-
-        expiry_dict = r.json()['expirations']
+        params = {'symbol': symbol, 'includeAllRoots': True, 'strikes': str(strikes)}
+        data = self.request(self.OPTIONS_EXPIRY_ENDPOINT, params=params)
+        expiry_dict = data['expirations']
 
         # Without strikes, we can get a list of dates
         if not strikes:
@@ -171,21 +161,17 @@ class OptionsData(Tradier):
 
             formatted_expiries = []
             for x in expiry_list:
-                formatted_expiries.append(datetime.strptime(x, '%y%m%d').strftime('%Y-%m-%d'))
+                formatted_expiries.append(dt.strptime(x, '%y%m%d').strftime('%Y-%m-%d'))
 
             return formatted_expiries
 
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.OPTIONS_SYMBOL_ENDPOINT}',
-            params={'underlying': symbol},
-            headers=self.REQUESTS_HEADERS
-        )
-
-        option_list = r.json()['symbols'][0]['options']
+        params = {'underlying': symbol}
+        data = self.request(self.OPTIONS_SYMBOL_ENDPOINT, params=params)
+        options = data['symbols'][0]['options']
 
         if df:
-            option_df = symbol_list_to_df(option_list)
+            option_df = symbol_list_to_df(options)
             option_df['expiration_date'] = parse_option_expiries(option_df['expiration_date'])
             return option_df
 
-        return option_list
+        return options

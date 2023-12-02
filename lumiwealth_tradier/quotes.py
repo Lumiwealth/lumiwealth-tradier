@@ -1,14 +1,13 @@
-from datetime import datetime, timedelta
+import datetime as dt
 
 import pandas as pd
-import requests
 
-from .base import Tradier
+from .base import TradierApiBase
 
 
-class Quotes(Tradier):
-    def __init__(self, account_number, auth_token):
-        Tradier.__init__(self, account_number, auth_token)
+class Quotes(TradierApiBase):
+    def __init__(self, account_number, auth_token, is_paper=True):
+        TradierApiBase.__init__(self, account_number, auth_token, is_paper)
 
         # Quotes endpoints for market data about equities
         self.QUOTES_ENDPOINT = "v1/markets/quotes"  # GET (POST)
@@ -63,27 +62,23 @@ class Quotes(Tradier):
             Returns:
                 datetime.date: The date of the previous Monday.
             """
-            return input_date - timedelta(days=(input_date.weekday()))
+            return input_date - dt.timedelta(days=(input_date.weekday()))
 
         if not end_date:
-            end_date = datetime.today().strftime('%Y-%m-%d')
+            end_date = dt.datetime.today().strftime('%Y-%m-%d')
 
         if not start_date:
-            tmp = datetime.strptime(end_date, '%Y-%m-%d')
+            tmp = dt.datetime.strptime(end_date, '%Y-%m-%d')
             start_date = last_monday(tmp).strftime('%Y-%m-%d')
 
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.QUOTES_HISTORICAL_ENDPOINT}',
-            params={
-                'symbol': symbol,
-                'interval': interval,
-                'start': start_date,
-                'end': end_date
-            },
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return pd.DataFrame(r.json()['history']['day'])
+        params = {
+            'symbol': symbol,
+            'interval': interval,
+            'start': start_date,
+            'end': end_date
+        }
+        data = self.request(self.QUOTES_HISTORICAL_ENDPOINT, params=params)
+        return pd.DataFrame(data['history']['day'])
 
     def get_quote_day(self, symbol, last_price=False):
         """
@@ -139,13 +134,9 @@ class Quotes(Tradier):
             last_price = q.get_quote_day(symbol='CCL', last_price=True)
             Sample Output: 15.73
         """
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.QUOTES_ENDPOINT}',
-            params={'symbols': symbol, 'greeks': 'false'},
-            headers=self.REQUESTS_HEADERS
-        )
-
-        df_quote = pd.json_normalize(r.json()['quotes']['quote'])
+        params = {'symbols': symbol, 'greeks': 'false'}
+        data = self.request(self.QUOTES_ENDPOINT, params=params)
+        df_quote = pd.json_normalize(data['quotes']['quote'])
 
         if last_price:
             return float(df_quote['last'])
@@ -155,28 +146,28 @@ class Quotes(Tradier):
     def get_timesales(self, symbol, interval='1min', start_time=False, end_time=False):
         # noinspection GrazieInspection
         """
-            This function returns the tick data for `symbol` in increments specified by `interval`.
-            Eventually, we can use this to analyze/visualze stock data in a time series context.
+        This function returns the tick data for `symbol` in increments specified by `interval`.
+        Eventually, we can use this to analyze/visualze stock data in a time series context.
 
-            Arguments `start_time` and `end_time` must be strings with format 'YYYY-MM-DD HH:MM'
+        Arguments `start_time` and `end_time` must be strings with format 'YYYY-MM-DD HH:MM'
 
-            Sample output:
-                >>> quotes = Quotes('ACCOUNT_NUMBER', 'AUTH_TOKEN')
-                >>> quotes.get_timesales('VZ', start_time='2023-09-27 09:45', end_time='2023-09-27 14:00')
-                                    time   timestamp     price   open   high      low   close  volume       vwap
-                0    2023-09-27T09:45:00  1695822300  32.92995  32.95  32.95  32.9099  32.915   39077  32.924828
-                1    2023-09-27T09:46:00  1695822360  32.89560  32.91  32.91  32.8800  32.895   32867  32.891113
-                2    2023-09-27T09:47:00  1695822420  32.88750  32.89  32.91  32.8650  32.910   75720  32.888736
-                3    2023-09-27T09:48:00  1695822480  32.91750  32.91  32.92  32.9100  32.910   15126  32.913109
-                4    2023-09-27T09:49:00  1695822540  32.91000  32.91  32.92  32.9000  32.920   20335  32.907385
-                ..                   ...         ...       ...    ...    ...      ...     ...     ...        ...
-                251  2023-09-27T13:56:00  1695837360  32.35425  32.34  32.36  32.3430  32.360   58256  32.354522
-                252  2023-09-27T13:57:00  1695837420  32.35500  32.35  32.36  32.3500  32.360   15825  32.355307
-                253  2023-09-27T13:58:00  1695837480  32.36125  32.35  32.37  32.3525  32.365   34624  32.362786
-                254  2023-09-27T13:59:00  1695837540  32.37500  32.37  32.39  32.3600  32.390   27728  32.370699
-                255  2023-09-27T14:00:00  1695837600  32.38750  32.38  32.39  32.3800  32.385   53837  32.386281
+        Sample output:
+            >>> quotes = Quotes('ACCOUNT_NUMBER', 'AUTH_TOKEN')
+            >>> quotes.get_timesales('VZ', start_time='2023-09-27 09:45', end_time='2023-09-27 14:00')
+                                time   timestamp     price   open   high      low   close  volume       vwap
+            0    2023-09-27T09:45:00  1695822300  32.92995  32.95  32.95  32.9099  32.915   39077  32.924828
+            1    2023-09-27T09:46:00  1695822360  32.89560  32.91  32.91  32.8800  32.895   32867  32.891113
+            2    2023-09-27T09:47:00  1695822420  32.88750  32.89  32.91  32.8650  32.910   75720  32.888736
+            3    2023-09-27T09:48:00  1695822480  32.91750  32.91  32.92  32.9100  32.910   15126  32.913109
+            4    2023-09-27T09:49:00  1695822540  32.91000  32.91  32.92  32.9000  32.920   20335  32.907385
+            ..                   ...         ...       ...    ...    ...      ...     ...     ...        ...
+            251  2023-09-27T13:56:00  1695837360  32.35425  32.34  32.36  32.3430  32.360   58256  32.354522
+            252  2023-09-27T13:57:00  1695837420  32.35500  32.35  32.36  32.3500  32.360   15825  32.355307
+            253  2023-09-27T13:58:00  1695837480  32.36125  32.35  32.37  32.3525  32.365   34624  32.362786
+            254  2023-09-27T13:59:00  1695837540  32.37500  32.37  32.39  32.3600  32.390   27728  32.370699
+            255  2023-09-27T14:00:00  1695837600  32.38750  32.38  32.39  32.3800  32.385   53837  32.386281
 
-                (vwap = volume weighted average price during the interval)
+            (vwap = volume weighted average price during the interval)
         """
         r_params = {'symbol': symbol}
         if start_time:
@@ -184,25 +175,17 @@ class Quotes(Tradier):
         if end_time:
             r_params['end'] = end_time
 
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.QUOTES_TIMESALES_ENDPOINT}',
-            params=r_params,
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return pd.json_normalize(r.json()['series']['data'])
+        data = self.request(self.QUOTES_TIMESALES_ENDPOINT, params=r_params)
+        return pd.json_normalize(data['series']['data'])
 
     def search_companies(self, query):
         if not query:
             return "Need that search term yo"
 
-        r = requests.get(
-            url=f'{self.SANDBOX_URL}/{self.QUOTES_SEARCH_ENDPOINT}',
-            params={'q': query, 'indexes': 'false'},
-            headers=self.REQUESTS_HEADERS
-        )
+        params = {'q': query, 'indexes': 'false'}
+        data = self.request(self.QUOTES_SEARCH_ENDPOINT, params=params)
 
-        if not r.json()['securities']:
+        if not data['securities']:
             return "Nothing found"
 
-        return pd.DataFrame(r.json()['securities']['security'])
+        return pd.DataFrame(data['securities']['security'])
