@@ -1,13 +1,11 @@
 import re
 
-import requests
-
-from .base import Tradier
+from .base import TradierApiBase
 
 
-class OptionsOrder(Tradier):
-    def __init__(self, account_number, auth_token):
-        Tradier.__init__(self, account_number, auth_token)
+class OptionsOrder(TradierApiBase):
+    def __init__(self, account_number, auth_token, is_paper=True):
+        TradierApiBase.__init__(self, account_number, auth_token, is_paper)
 
         # Order endpoint
         self.ORDER_ENDPOINT = f"v1/accounts/{account_number}/orders"  # POST
@@ -18,106 +16,86 @@ class OptionsOrder(Tradier):
             underlying: asset symbol (e.g. 'SPY')
             option0: OCC symbol of
         """
-        r = requests.post(
-            url=f'{self.SANDBOX_URL}/{self.ORDER_ENDPOINT}',
-            data={
-                'class': 'multileg',
-                'symbol': underlying,
-                'type': 'market',
-                'duration': duration,
-                'option_symbol[0]': option0,
-                'side[0]': 'buy_to_open',
-                'quantity[0]': quantity0,
-                'option_symbol[1]': option1,
-                'side[1]': 'sell_to_open',
-                'quantity[1]': quantity1
-            },
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return r.json()
+        params = {
+            'class': 'multileg',
+            'symbol': underlying,
+            'type': 'market',
+            'duration': duration,
+            'option_symbol[0]': option0,
+            'side[0]': 'buy_to_open',
+            'quantity[0]': quantity0,
+            'option_symbol[1]': option1,
+            'side[1]': 'sell_to_open',
+            'quantity[1]': quantity1
+        }
+        return self.send(self.ORDER_ENDPOINT, params)
 
     def bear_call_spread(self, underlying, option0, quantity0, option1, quantity1, duration='day'):
         """
-            Bear call spread example:
-                • XYZ @ $50/share
-                • Pr(XYZ < $55/share) > .50
-                • Legs
-                    • Short Call with K1 ≥ S (e.g. K1=55 > S=50) and receive $3 premium
-                    • Long Call with K2 > K1 ≥ S (e.g. K2=60 > K1=55 ≥ S=50) and pay $1 premium
-                • Expiry t=T
-                    • If S(T) < K1 -> payoff = premium differential
-                    • If K1 < S(T) < K2
-                        • short call exercised and must sell at K1 = $55
-                        • long call expires OTM
-                        • payoff = (K1-K2) + (premium differential) < 0
-                    • If S(T) > K2 > K1
-                        • short call exercised and must sell at K1 = $55
-                        • long call exercised and can buy XYZ at K2 = $60
-                        • payoff = (K1-K2) + (premium differential) < 0
+        Bear call spread example:
+            • XYZ @ $50/share
+            • Pr(XYZ < $55/share) > .50
+            • Legs
+                • Short Call with K1 ≥ S (e.g. K1=55 > S=50) and receive $3 premium
+                • Long Call with K2 > K1 ≥ S (e.g. K2=60 > K1=55 ≥ S=50) and pay $1 premium
+            • Expiry t=T
+                • If S(T) < K1 -> payoff = premium differential
+                • If K1 < S(T) < K2
+                    • short call exercised and must sell at K1 = $55
+                    • long call expires OTM
+                    • payoff = (K1-K2) + (premium differential) < 0
+                • If S(T) > K2 > K1
+                    • short call exercised and must sell at K1 = $55
+                    • long call exercised and can buy XYZ at K2 = $60
+                    • payoff = (K1-K2) + (premium differential) < 0
         """
-        r = requests.post(
-            url=f'{self.SANDBOX_URL}/{self.ORDER_ENDPOINT}',
-            data={
-                'class': 'multileg',
-                'symbol': underlying,
-                'type': 'market',
-                'duration': duration,
-                'option_symbol[0]': option0,
-                'side[0]': 'buy_to_open',
-                'quantity[0]': quantity0,
-                'option_symbol[1]': option1,
-                'side[1]': 'sell_to_open',
-                'quantity[1]': quantity1
-            },
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return r.json()
+        params = {
+            'class': 'multileg',
+            'symbol': underlying,
+            'type': 'market',
+            'duration': duration,
+            'option_symbol[0]': option0,
+            'side[0]': 'buy_to_open',
+            'quantity[0]': quantity0,
+            'option_symbol[1]': option1,
+            'side[1]': 'sell_to_open',
+            'quantity[1]': quantity1
+        }
+        return self.send(self.ORDER_ENDPOINT, params)
 
     def bull_put_spread(self, underlying_symbol, option_symbol_0, quantity_0, option_symbol_1, quantity_1,
                         duration='day'):
-        r = requests.post(
-            url=f'{self.SANDBOX_URL}/{self.ORDER_ENDPOINT}',
-            data={
-                'class': 'multileg',
-                'symbol': underlying_symbol,
-                'type': 'market',
-                'duration': duration,
-                'option_symbol[0]': option_symbol_0,
-                'side[0]': 'sell_to_open',
-                'quantity[0]': quantity_0,
-                'option_symbol[1]': option_symbol_1,
-                'side[1]': 'buy_to_open',
-                'quantity[1]': quantity_1
-            },
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return r.json()
+        params = {
+            'class': 'multileg',
+            'symbol': underlying_symbol,
+            'type': 'market',
+            'duration': duration,
+            'option_symbol[0]': option_symbol_0,
+            'side[0]': 'sell_to_open',
+            'quantity[0]': quantity_0,
+            'option_symbol[1]': option_symbol_1,
+            'side[1]': 'buy_to_open',
+            'quantity[1]': quantity_1
+        }
+        return self.send(self.ORDER_ENDPOINT, params)
 
     def bull_call_spread(self, underlying_symbol, option_symbol_0, quantity_0, option_symbol_1, quantity_1,
                          duration='day'):
-        r = requests.post(
-            url=f'{self.SANDBOX_URL}/{self.ORDER_ENDPOINT}',
-            data={
-                'class': 'multileg',
-                'symbol': underlying_symbol,
-                'type': 'market',
-                'duration': duration,
-                'option_symbol[0]': option_symbol_0,
-                'side[0]': 'buy_to_open',
-                'quantity[0]': quantity_0,
-                'option_symbol[1]': option_symbol_1,
-                'side[1]': 'sell_to_open',
-                'quantity[1]': quantity_1
-            },
-            headers=self.REQUESTS_HEADERS
-        )
+        params = {
+            'class': 'multileg',
+            'symbol': underlying_symbol,
+            'type': 'market',
+            'duration': duration,
+            'option_symbol[0]': option_symbol_0,
+            'side[0]': 'buy_to_open',
+            'quantity[0]': quantity_0,
+            'option_symbol[1]': option_symbol_1,
+            'side[1]': 'sell_to_open',
+            'quantity[1]': quantity_1
+        }
+        return self.send(self.ORDER_ENDPOINT, params)
 
-        return r.json()
-
-    def extract_occ_underlying(self, occ_symbol):
+    def _extract_occ_underlying(self, occ_symbol):
         match = re.match(r'^([A-Z]){1,4}\d', occ_symbol)
         if match:
             return match.group(1)
@@ -151,7 +129,7 @@ class OptionsOrder(Tradier):
             # Returns: {'order': {'id': 8042606, 'status': 'ok', 'partner_id': '3a8bbee1-5184-4ffe-8a0c-294fbad1aee9'}}
         """
         if not underlying:
-            underlying = self.extract_occ_underlying(occ_symbol)
+            underlying = self._extract_occ_underlying(occ_symbol)
 
         r_data = {
             'class': 'option',
@@ -174,10 +152,4 @@ class OptionsOrder(Tradier):
                 return None
             r_data['stop'] = stop_price
 
-        r = requests.post(
-            url=f'{self.SANDBOX_URL}/{self.ORDER_ENDPOINT}',
-            data=r_data,
-            headers=self.REQUESTS_HEADERS
-        )
-
-        return r.json()
+        return self.send(self.ORDER_ENDPOINT, r_data)
