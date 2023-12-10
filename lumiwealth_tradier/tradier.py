@@ -1,5 +1,6 @@
 from .account import Account
 from .equity_order import EquityOrder
+from .market import MarketData
 from .options_data import OptionsData
 from .options_order import OptionsOrder
 from .quotes import Quotes
@@ -14,6 +15,7 @@ class Tradier:
 
         self.account = Account(self.ACCOUNT_NUMBER, self.AUTH_TOKEN, is_paper)
         self.equity_order = EquityOrder(self.ACCOUNT_NUMBER, self.AUTH_TOKEN, is_paper)
+        self.market = MarketData(self.ACCOUNT_NUMBER, self.AUTH_TOKEN, is_paper)
         self.options_data = OptionsData(self.ACCOUNT_NUMBER, self.AUTH_TOKEN, is_paper)
         self.options_order = OptionsOrder(self.ACCOUNT_NUMBER, self.AUTH_TOKEN, is_paper)
         self.quotes = Quotes(self.ACCOUNT_NUMBER, self.AUTH_TOKEN, is_paper)
