@@ -1,3 +1,5 @@
+import datetime as dt
+
 import requests
 
 # Define base url for live/paper trading and individual API endpoints
@@ -30,6 +32,19 @@ class TradierApiBase:
         else:
             return TRADIER_LIVE_URL
 
+    @staticmethod
+    def date2str(date: str | dt.datetime | dt.date, include_min=False) -> str:
+        """
+        This function converts a datetime.date object to a string in the format of YYYY-MM-DD.
+        :param date: datetime.date object
+        :param include_min: Include minutes in the string. Default is False.
+        :return: String in the format of YYYY-MM-DD or YYYY-MM-DD HH:MM
+        """
+        format_str = '%Y-%m-%d' if not include_min else '%Y-%m-%d %H:%M'
+        if isinstance(date, dt.datetime | dt.date):
+            return date.strftime(format_str)
+        return date
+
     def request(self, endpoint, params=None, headers=None) -> dict:
         """
         This function makes a request to the Tradier API and returns a json object.
@@ -54,7 +69,6 @@ class TradierApiBase:
         if r.status_code != 200:
             raise TradierApiError(f'Error: {r.status_code} - {r.text}')
 
-        # TODO: Check for errors or empty response - Frequently empty or positions and orders before anything is placed
         return r.json()
 
     def send(self, endpoint, data, headers=None) -> dict:

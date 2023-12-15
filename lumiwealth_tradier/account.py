@@ -148,7 +148,10 @@ class Account(TradierApiBase):
             'trade', 'option', 'ach', 'wire', 'dividend', 'fee', 'tax', 'journal', 'check', 'transfer', 'adjustment',
             'interest'
         ]
-        params = {}
+        params = {
+            'start': self.date2str(start_date),
+            'end': self.date2str(end_date),
+        }
 
         if activity_type:
             if activity_type.lower() not in valid_activity_types:
@@ -157,13 +160,6 @@ class Account(TradierApiBase):
 
         if symbol:
             params['symbol'] = symbol.upper()
-
-        for key, t_date in [('start', start_date), ('end', end_date)]:
-            if t_date:
-                if isinstance(t_date, (dt.datetime, dt.date)):
-                    params[key] = t_date.strftime('%Y-%m-%d')
-                else:
-                    params[key] = t_date
 
         if limit:
             params['limit'] = limit
