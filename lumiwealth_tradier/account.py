@@ -1,3 +1,5 @@
+import datetime as dt
+
 import pandas as pd
 
 from .base import TradierApiBase
@@ -14,7 +16,7 @@ class Account(TradierApiBase):
         self.ACCOUNT_HISTORY_ENDPOINT = f"v1/accounts/{account_number}/history"  # GET
         self.ACCOUNT_POSITIONS_ENDPOINT = f"v1/accounts/{account_number}/positions"  # GET
         self.ACCOUNT_INDIVIDUAL_ORDER_ENDPOINT = "v1/accounts/{account_id}/orders/{order_id}"  # GET
-        self.ORDER_ENDPOINT = f"v1/accounts/{account_number}/orders"  # GET
+        self.ORDERS_ENDPOINT = f"v1/accounts/{account_number}/orders"  # GET - Used for single id or all orders
 
     def get_user_profile(self):
         """
@@ -48,7 +50,7 @@ class Account(TradierApiBase):
         data = self.request(endpoint=self.PROFILE_ENDPOINT)
         return pd.json_normalize(data['profile'])
 
-    def get_account_balance(self):
+    def get_account_balance(self) -> pd.DataFrame:
         """
         Fetch the account balance information from the Tradier Account API.
 
@@ -95,7 +97,7 @@ class Account(TradierApiBase):
         data = self.request(endpoint=self.ACCOUNT_BALANCE_ENDPOINT)
         return pd.json_normalize(data['balances'])
 
-    def get_gainloss(self):
+    def get_gainloss(self) -> pd.DataFrame:
         """
             Get cost basis information for a specific user account.
             This includes information for all closed positions.
@@ -118,11 +120,65 @@ class Account(TradierApiBase):
         data = self.request(endpoint=self.ACCOUNT_GAINLOSS_ENDPOINT)
         return pd.json_normalize(data['gainloss']['closed_position'])
 
-    def get_orders(self):
+    def get_history(
+            self,
+            start_date: dt.datetime | dt.date | str | None = None,
+            end_date: dt.datetime | dt.date | str | None = None,
+            limit: int | None = None,  # Tradier default if not specified is only 25
+            activity_type: str | None = None,
+            symbol: str | None = None,
+    ) -> pd.DataFrame:
+        """
+        Get account activity history
+
+        Args:
+            start_date (dt.datetime | dt.date | str | None, optional): Start date for history. Defaults to None.
+            end_date (dt.datetime | dt.date | str | None, optional): End date for history. Defaults to None.
+            limit (int | None, optional): Number of rows to return. Defaults to 25 in Tradier itself.
+            activity_type (str | None, optional): Type of activity to filter by. Valid values are:
+                trade, option, ach, wire, dividend, fee, tax, journal, check, transfer, adjustment, interest
+            symbol (str | None, optional): Symbol to filter by. Defaults to None.
+
+        Returns:
+            pd.DataFrame: DataFrame of account activity history. See Tradier documentation for details of columns
+                returned.  https://documentation.tradier.com/brokerage-api/accounts/get-account-history
+
+        """
+        valid_activity_types = [
+            'trade', 'option', 'ach', 'wire', 'dividend', 'fee', 'tax', 'journal', 'check', 'transfer', 'adjustment',
+            'interest'
+        ]
+        params = {
+            'start': self.date2str(start_date),
+            'end': self.date2str(end_date),
+        }
+
+        if activity_type:
+            if activity_type.lower() not in valid_activity_types:
+                raise ValueError(f'activity_type ({activity_type}) must be one of {valid_activity_types}')
+            params['type'] = activity_type.lower()
+
+        if symbol:
+            params['symbol'] = symbol.upper()
+
+        if limit:
+            params['limit'] = limit
+
+        data = self.request(endpoint=self.ACCOUNT_HISTORY_ENDPOINT, params=params)
+        return pd.json_normalize(data['history']['event'])
+
+    def get_order(self, order_id) -> pd.DataFrame:
+        """Simple convenience function to return a single order by order_id."""
+        return self.get_orders(order_id=order_id)
+
+    def get_orders(self, order_id=None) -> pd.DataFrame:
         """
             This function returns a pandas DataFrame.
             Each row denotes a queued order. Each column contiains a feature_variable pertaining to the order.
             Transposed sample output has the following structure:
+
+            Args:
+                order_id (str, optional): If provided, returns a single order with the specified order_id.
 
             >>> account = Account(account_number='<id>', auth_token='<token>')
             >>> account.get_orders().T
@@ -145,7 +201,7 @@ class Account(TradierApiBase):
             transaction_date    2023-09-26T12:30:19.152Z  2023-09-26T14:45:00.216Z
             class                                 equity                    equity
         """
-        data = self.request(endpoint=self.ORDER_ENDPOINT)
+        data = self.request(endpoint=self.ORDERS_ENDPOINT)
         # TODO: Better error handling for empty orders
         if data['orders'] == 'null':
             return 'You have no current orders.'
