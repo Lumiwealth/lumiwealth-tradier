@@ -113,12 +113,23 @@ class TestMarket:
         expr_date = df_expr.index[0]
         strike = df_expr.iloc[0]['strikes'][0]
 
-        # Get the option symbols
+        # Get the option symbols - lookup chains
         symbol = tradier.market.get_option_symbol('SPY', expr_date, strike, 'call')
         assert symbol is not None
         assert isinstance(symbol, str)
         assert symbol != ''
-        assert re.match(r'SPY\d+[CP]\d+', symbol)
+        assert re.match(r'SPY\d+C\d+', symbol)
+
+        # Pass chains in so additional lookups aren't required
+        chains_df = tradier.market.get_option_chains('SPY', expr_date)
+        assert chains_df is not None
+        symbol = tradier.market.get_option_symbol('SPY', expr_date, strike, 'put', chains_df)
+        assert symbol != ''
+        assert re.match(r'SPY\d+P\d+', symbol)
+
+        # Unkown Strike
+        with pytest.raises(LookupError):
+            tradier.market.get_option_symbol('SPY', expr_date, 1000000.99, 'call')
 
         with pytest.raises(LookupError):
             tradier.market.get_option_symbol('bad_symbol', '2023-12-01', 100, 'call')

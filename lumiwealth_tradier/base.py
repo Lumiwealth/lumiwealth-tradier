@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Union
 
 import requests
 
@@ -33,7 +34,7 @@ class TradierApiBase:
             return TRADIER_LIVE_URL
 
     @staticmethod
-    def date2str(date: str | dt.datetime | dt.date, include_min=False) -> str:
+    def date2str(date: Union[str | dt.datetime | dt.date], include_min=False) -> str:
         """
         This function converts a datetime.date object to a string in the format of YYYY-MM-DD.
         :param date: datetime.date object
@@ -45,12 +46,25 @@ class TradierApiBase:
             return date.strftime(format_str)
         return date
 
-    def request(self, endpoint, params=None, headers=None) -> dict:
+    def delete(self, endpoint, params=None, headers=None, data=None) -> dict:
+        """
+        This function makes a DELETE request to the Tradier API and returns a json object.
+        :param endpoint:  Tradier API endpoint
+        :param params:  Dictionary of requests.delete() parameters to pass to the endpoint
+        :param headers:  Dictionary of requests.delete() headers to pass to the endpoint
+        :param data:  Dictionary of requests.delete() data to pass to the endpoint
+        :return:  json object
+        """
+        return self.request(endpoint, params=params, headers=headers, data=data, method='delete')
+
+    def request(self, endpoint, params=None, headers=None, data=None, method='get') -> dict:
         """
         This function makes a request to the Tradier API and returns a json object.
         :param endpoint: Tradier API endpoint
         :param params: Dictionary of requests.get() parameters to pass to the endpoint
         :param headers: Dictionary of requests.get() headers to pass to the endpoint
+        :param data: Dictionary of requests.post() data to pass to the endpoint
+        :param method: 'get', 'post' or 'delete'
         :return: json object
         """
         if not headers:
@@ -59,37 +73,52 @@ class TradierApiBase:
         if not params:
             params = {}
 
-        r = requests.get(
-            url=f'{self.base_url()}/{endpoint}',
-            params=params,
-            headers=headers
-        )
+        if not data:
+            data = {}
+
+        if method == 'get':
+            r = requests.get(
+                url=f'{self.base_url()}/{endpoint}',
+                params=params,
+                headers=headers
+            )
+        elif method == 'post':
+            r = requests.post(
+                url=f'{self.base_url()}/{endpoint}',
+                params=params,
+                headers=headers,
+                data=data
+            )
+        elif method == 'delete':
+            r = requests.delete(
+                url=f'{self.base_url()}/{endpoint}',
+                params=params,
+                data=data,
+                headers=headers
+            )
+        else:
+            raise ValueError(f"Invalid method {method}. Must be one of ['get', 'post', 'delete']")
 
         # Check for errors in response
         if r.status_code != 200:
             raise TradierApiError(f'Error: {r.status_code} - {r.text}')
+
+        ret_data = r.json()
+        if ret_data and 'errors' in ret_data and "error" in ret_data['errors']:
+            if isinstance(ret_data['errors']['error'], list):
+                msg = ' | '.join(ret_data['errors']['error'])
+            else:
+                msg = ret_data['errors']['error']
+            raise TradierApiError(f"Error: {msg}")
 
         return r.json()
 
     def send(self, endpoint, data, headers=None) -> dict:
         """
-        This function sends a request to the Tradier API and returns a json object.
+        This function sends a post request to the Tradier API and returns a json object.
         :param endpoint: Tradier API endpoint
         :param data: Dictionary of requests.post() data to pass to the endpoint
         :param headers: Dictionary of requests.post() headers to pass to the endpoint
         :return: json object
         """
-        if not headers:
-            headers = self.REQUESTS_HEADERS
-
-        r = requests.post(
-            url=f'{self.base_url()}/{endpoint}',
-            data=data,
-            headers=headers
-        )
-
-        # Check for errors in response
-        if r.status_code != 200:
-            raise TradierApiError(f'Error: {r.status_code} - {r.text}')
-
-        return r.json()
+        return self.request(endpoint, params={}, headers=headers, data=data, method='post')
