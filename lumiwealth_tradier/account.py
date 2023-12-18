@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Union
 
 import pandas as pd
 
@@ -16,7 +17,6 @@ class Account(TradierApiBase):
         self.ACCOUNT_HISTORY_ENDPOINT = f"v1/accounts/{account_number}/history"  # GET
         self.ACCOUNT_POSITIONS_ENDPOINT = f"v1/accounts/{account_number}/positions"  # GET
         self.ACCOUNT_INDIVIDUAL_ORDER_ENDPOINT = "v1/accounts/{account_id}/orders/{order_id}"  # GET
-        self.ORDERS_ENDPOINT = f"v1/accounts/{account_number}/orders"  # GET - Used for single id or all orders
 
     def get_user_profile(self):
         """
@@ -122,11 +122,11 @@ class Account(TradierApiBase):
 
     def get_history(
             self,
-            start_date: dt.datetime | dt.date | str | None = None,
-            end_date: dt.datetime | dt.date | str | None = None,
-            limit: int | None = None,  # Tradier default if not specified is only 25
-            activity_type: str | None = None,
-            symbol: str | None = None,
+            start_date: Union[dt.datetime | dt.date | str | None] = None,
+            end_date: Union[dt.datetime | dt.date | str | None] = None,
+            limit: Union[int | None] = None,  # Tradier default if not specified is only 25
+            activity_type: Union[str | None] = None,
+            symbol: Union[str | None] = None,
     ) -> pd.DataFrame:
         """
         Get account activity history
@@ -166,47 +166,6 @@ class Account(TradierApiBase):
 
         data = self.request(endpoint=self.ACCOUNT_HISTORY_ENDPOINT, params=params)
         return pd.json_normalize(data['history']['event'])
-
-    def get_order(self, order_id) -> pd.DataFrame:
-        """Simple convenience function to return a single order by order_id."""
-        return self.get_orders(order_id=order_id)
-
-    def get_orders(self, order_id=None) -> pd.DataFrame:
-        """
-            This function returns a pandas DataFrame.
-            Each row denotes a queued order. Each column contiains a feature_variable pertaining to the order.
-            Transposed sample output has the following structure:
-
-            Args:
-                order_id (str, optional): If provided, returns a single order with the specified order_id.
-
-            >>> account = Account(account_number='<id>', auth_token='<token>')
-            >>> account.get_orders().T
-                                                       0                         1
-            id                                   8248093                   8255194
-            type                              stop_limit                    market
-            symbol                                   UNP                        CF
-            side                                     buy                       buy
-            quantity                                 3.0                      10.0
-            status                                  open                    filled
-            duration                                 day                       gtc
-            price                                  200.0                       NaN
-            avg_fill_price                           0.0                     87.39
-            exec_quantity                            0.0                      10.0
-            last_fill_price                          0.0                     87.39
-            last_fill_quantity                       0.0                      10.0
-            remaining_quantity                       3.0                       0.0
-            stop_price                             200.0                       NaN
-            create_date         2023-09-25T20:29:10.351Z  2023-09-26T14:45:00.155Z
-            transaction_date    2023-09-26T12:30:19.152Z  2023-09-26T14:45:00.216Z
-            class                                 equity                    equity
-        """
-        data = self.request(endpoint=self.ORDERS_ENDPOINT)
-        # TODO: Better error handling for empty orders
-        if data['orders'] == 'null':
-            return 'You have no current orders.'
-
-        return pd.json_normalize(data['orders']['order'])
 
     def get_positions(self, symbols=False, equities=False, options=False):
         """

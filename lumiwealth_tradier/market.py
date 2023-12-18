@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Union
 
 import pandas as pd
 
@@ -29,7 +30,7 @@ class MarketData(TradierApiBase):
         self.LOOKUP_SYMBOL_ENDPOINT = "v1/markets/lookup"
 
     # Create functions for each endpoint
-    def get_quotes(self, symbols: str | list[str], greeks=False) -> pd.DataFrame:
+    def get_quotes(self, symbols: Union[str | list[str]], greeks=False) -> pd.DataFrame:
         # noinspection PyShadowingNames
         """
         Get quotes for a list of symbols.
@@ -79,8 +80,8 @@ class MarketData(TradierApiBase):
             symbol: str,
             interval: str = 'daily',
             session_filter: str = 'open',
-            start_date: dt.datetime | dt.date | str | None = None,
-            end_date: dt.datetime | dt.date | str | None = None,
+            start_date: Union[dt.datetime | dt.date | str | None] = None,
+            end_date: Union[dt.datetime | dt.date | str | None] = None,
     ) -> pd.DataFrame:
         """
         Get historical quotes for a symbol.  This is for large timescale aggregation of daily or more.
@@ -134,8 +135,8 @@ class MarketData(TradierApiBase):
             self,
             symbol: str,
             interval: int = 1,
-            start_date: dt.datetime | dt.date | str | None = None,
-            end_date: dt.datetime | dt.date | str | None = None,
+            start_date: Union[dt.datetime | dt.date | str | None] = None,
+            end_date: Union[dt.datetime | dt.date | str | None] = None,
             session_filter: str = 'open',
     ) -> pd.DataFrame:
         """
@@ -232,7 +233,7 @@ class MarketData(TradierApiBase):
         df['date'] = pd.to_datetime(df['date']).dt.date
         return df.set_index('date')
 
-    def get_option_chains(self, symbol: str, expiration: dt.date | str, greeks=False) -> pd.DataFrame:
+    def get_option_chains(self, symbol: str, expiration: Union[dt.date | str], greeks=False) -> pd.DataFrame:
         """
         Get option chains for a symbol and expiration.
 
@@ -265,7 +266,7 @@ class MarketData(TradierApiBase):
         df['expiration_date'] = pd.to_datetime(df['expiration_date']).dt.date
         return df
 
-    def get_option_strikes(self, symbol: str, expiration: dt.date | str) -> list[float]:
+    def get_option_strikes(self, symbol: str, expiration: Union[dt.date | str]) -> list[float]:
         """
         Get option strikes for a symbol and expiration.
 
@@ -292,7 +293,8 @@ class MarketData(TradierApiBase):
         strikes = response['strikes']['strike']
         return strikes if isinstance(strikes, list) else [strikes]
 
-    def get_option_symbol(self, symbol: str, expiration: dt.date | str, strike: float, option_type: str) -> str:
+    def get_option_symbol(self, symbol: str, expiration: Union[dt.date | str], strike: float, option_type: str,
+                          chains: Union[pd.DataFrame | None] = None) -> str:
         """
         Get option symbol for a symbol, expiration, strike, and option type.
 
@@ -303,9 +305,11 @@ class MarketData(TradierApiBase):
         :param expiration: Expiration date to get option symbol for.
         :param strike: Strike to get option symbol for.
         :param option_type: Option type to get option symbol for. Valid values are: call, put
+        :param chains: DataFrame of option chains. If not provided, will call get_option_chains() to get the chains.
         :return: Option symbol.
         """
-        chains = self.get_option_chains(symbol, expiration)
+        if not isinstance(chains, pd.DataFrame) or chains.empty:
+            chains = self.get_option_chains(symbol, expiration)
         symbol = chains.loc[(chains['strike'] == strike) & (chains['option_type'] == option_type.lower())]['symbol']
         if len(symbol) == 0:
             raise LookupError(f"No Option Symbol found for: Symbol={symbol}, Expiration={expiration}, Strike={strike}, "
@@ -353,8 +357,8 @@ class MarketData(TradierApiBase):
         df['date'] = pd.to_datetime(df['date']).dt.date
         return df.set_index('date')
 
-    def lookup_symbol(self, query: str, exchanges: str | list | None = None,
-                      types: str | list | None = None) -> pd.DataFrame:
+    def lookup_symbol(self, query: str, exchanges: Union[str | list | None] = None,
+                      types: Union[str | list | None] = None) -> pd.DataFrame:
         """
         Lookup a symbol.
 
