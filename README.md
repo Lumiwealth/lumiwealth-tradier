@@ -1,6 +1,6 @@
 # lumiwealth-tradier
 
-`lumiwealth_tradier` is a Python package that serves as a wrapper for the Tradier brokerage API. This package simplifies the process of making API requests, handling responses, and performing various trading and account management operations.
+`lumiwealth-tradier` is a Python package that serves as a wrapper for the Tradier brokerage API. This package simplifies the process of making API requests, handling responses, and performing various trading and account management operations.
 
 The package was originally developed by data science graduate students at the University of Virginia.
 
@@ -13,9 +13,9 @@ The package was originally developed by data science graduate students at the Un
 
 ## Installation
 
-To install `lumiwealth_tradier`, you can use `pip`:
+To install `lumiwealth-tradier`, you can use `pip`:
 
-`pip install lumiwealth_tradier`
+`pip install lumiwealth-tradier`
 
 ## Hello World
 
@@ -34,7 +34,7 @@ Steps to get started:
   * To authenticate yourself, add the following lines of code to the top of your python script or jupyter notebook: <br>
       `import os, dotenv`
       
-      `from lumiwealth_tradier import Tradier, Account, Quotes, EquityOrder, OptionsData, OptionsOrder`
+      `from lumiwealth-tradier import Tradier, Account, Quotes, EquityOrder, OptionsData, OptionsOrder`
       
       `dotenv.load_dotenv()`
       
@@ -121,15 +121,15 @@ This section provides example functionality of the existing codebase. Additional
 
 ## Development
 
-To contribute or make changes to the `lumiwealth_tradier` package, feel free to create a fork, clone the fork, make some improvements and issue a pull request. From the terminal/command prompt:
+To contribute or make changes to the `lumiwealth-tradier` package, feel free to create a fork, clone the fork, make some improvements and issue a pull request. From the terminal/command prompt:
 
 - Clone the forked branch to your local machine:
 
-  `git clone https://github.com/YOUR_USERNAME/lumiwealth_tradier.git`
+  `git clone https://github.com/YOUR_USERNAME/lumiwealth-tradier.git`
 
 - Navigate to the directory where the relevant code is kept: 
 
-  `cd lumiwealth_tradier`
+  `cd lumiwealth-tradier`
 
 - If you need to be careful about dependencies, create a new Python virtual environment: <br>
 
@@ -144,4 +144,4 @@ Thanks much in advance for your interest in using the package.
 
 ## License
 
-`lumiwealth_tradier` is licensed under the Apache License 2.0
+`lumiwealth-tradier` is licensed under the Apache License 2.0
