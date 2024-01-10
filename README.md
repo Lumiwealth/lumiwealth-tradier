@@ -34,7 +34,7 @@ Steps to get started:
   * To authenticate yourself, add the following lines of code to the top of your python script or jupyter notebook: <br>
       `import os, dotenv`
       
-      `from lumiwealth-tradier import Tradier, Account, Quotes, EquityOrder, OptionsData, OptionsOrder`
+      `from lumiwealth_tradier import Tradier, Account, Quotes, EquityOrder, OptionsData, OptionsOrder`
       
       `dotenv.load_dotenv()`
       
