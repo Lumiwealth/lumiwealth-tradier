@@ -40,3 +40,5 @@ dist
 my_dev
 .vscode/**
 *.tmp
+scratchpad.py
+scratchpad.ipynb

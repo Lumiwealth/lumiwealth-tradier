@@ -13,6 +13,7 @@ class MarketData(TradierApiBase):
     Tradier API Documentation:
     https://documentation.tradier.com/brokerage-api/markets/get-quotes
     """
+
     def __init__(self, account_number, auth_token, is_paper=True):
         TradierApiBase.__init__(self, account_number, auth_token, is_paper)
 
@@ -48,24 +49,21 @@ class MarketData(TradierApiBase):
         :return: DataFrame of quotes.  See Tradier weblink for column definitions.
         """
         # Create payload
-        symbols = symbols if isinstance(symbols, str) else ','.join(symbols)
-        payload = {
-            'symbols': symbols,
-            greeks: greeks
-        }
+        symbols = symbols if isinstance(symbols, str) else ",".join(symbols)
+        payload = {"symbols": symbols, greeks: greeks}
 
         # Get response
         response = self.request(self.QUOTES_ENDPOINT, payload)
 
-        if 'quote' not in response['quotes']:
+        if "quote" not in response["quotes"]:
             raise ValueError(f"Invalid symbol: {payload['symbols']}")
 
         # Parse response - single Symbol doesn't return a list from the API, multiple symbols do
-        quotes = response['quotes']['quote']
+        quotes = response["quotes"]["quote"]
         quotes = quotes if isinstance(quotes, list) else [quotes]
         df = pd.json_normalize(quotes)
 
-        return df.set_index('symbol')
+        return df.set_index("symbol")
 
     def get_last_price(self, symbol: str) -> float:
         """
@@ -73,15 +71,15 @@ class MarketData(TradierApiBase):
         :param symbol: Symbol to get the last price for.
         :return: Last price for the symbol.
         """
-        return self.get_quotes(symbol).loc[symbol]['last']
+        return self.get_quotes(symbol).loc[symbol]["last"]
 
     def get_historical_quotes(
-            self,
-            symbol: str,
-            interval: str = 'daily',
-            session_filter: str = 'open',
-            start_date: Union[dt.datetime | dt.date | str | None] = None,
-            end_date: Union[dt.datetime | dt.date | str | None] = None,
+        self,
+        symbol: str,
+        interval: str = "daily",
+        session_filter: str = "open",
+        start_date: Union[dt.datetime | dt.date | str | None] = None,
+        end_date: Union[dt.datetime | dt.date | str | None] = None,
     ) -> pd.DataFrame:
         """
         Get historical quotes for a symbol.  This is for large timescale aggregation of daily or more.
@@ -97,47 +95,50 @@ class MarketData(TradierApiBase):
 
         :return: DataFrame of historical quotes. See Tradier weblink for column definitions.
         """
-        valid_intervals = ['daily', 'weekly', 'monthly']
+        valid_intervals = ["daily", "weekly", "monthly"]
         if interval.lower() not in valid_intervals:
             raise ValueError(f"Invalid interval {interval}. Valid intervals are {valid_intervals}")
 
-        valid_session_filters = ['all', 'open']
+        valid_session_filters = ["all", "open"]
         if session_filter.lower() not in valid_session_filters:
-            raise ValueError(f"Invalid session_filter {session_filter}. Valid session_filters are "
-                             f"{valid_session_filters}")
+            raise ValueError(
+                f"Invalid session_filter {session_filter}. Valid session_filters are " f"{valid_session_filters}"
+            )
 
         # Create payload
         payload = {
-            'symbol': symbol,
-            'interval': interval.lower(),
-            'session_filter': session_filter.lower(),
+            "symbol": symbol,
+            "interval": interval.lower(),
+            "session_filter": session_filter.lower(),
         }
         if start_date:
-            payload['start'] = self.date2str(start_date)
+            payload["start"] = self.date2str(start_date)
         if end_date:
-            payload['end'] = self.date2str(end_date)
+            payload["end"] = self.date2str(end_date)
 
         # Get response
         response = self.request(self.HISTORICAL_QUOTES_ENDPOINT, payload)
 
-        if 'day' not in response['history']:
-            raise LookupError(f"No Historical Data found for: Symbol={payload['symbol']}, start={payload['start']}, "
-                              f"end={payload['end']}")
+        if response["history"] is None or "day" not in response["history"]:
+            raise LookupError(
+                f"No Historical Data found for: Symbol={payload['symbol']}, start={payload['start']}, "
+                f"end={payload['end']}"
+            )
 
         # Parse response
-        quotes = response['history']['day']
+        quotes = response["history"]["day"]
         quotes = quotes if isinstance(quotes, list) else [quotes]
         df = pd.json_normalize(quotes)
-        df['date'] = pd.to_datetime(df['date']).dt.date
-        return df.set_index('date')
+        df["date"] = pd.to_datetime(df["date"]).dt.date
+        return df.set_index("date")
 
     def get_timesales(
-            self,
-            symbol: str,
-            interval: int = 1,
-            start_date: Union[dt.datetime | dt.date | str | None] = None,
-            end_date: Union[dt.datetime | dt.date | str | None] = None,
-            session_filter: str = 'open',
+        self,
+        symbol: str,
+        interval: int = 1,
+        start_date: Union[dt.datetime | dt.date | str | None] = None,
+        end_date: Union[dt.datetime | dt.date | str | None] = None,
+        session_filter: str = "open",
     ) -> pd.DataFrame:
         """
         Get time and sales for a symbol. This is for small timescale aggregation of less than a day. Can only look
@@ -156,35 +157,39 @@ class MarketData(TradierApiBase):
         if interval not in [1, 5, 15]:
             raise ValueError(f"Invalid interval {interval}. Valid intervals are 1, 5, 15")
 
-        valid_session_filters = ['all', 'open']
+        valid_session_filters = ["all", "open"]
         if session_filter.lower() not in valid_session_filters:
-            raise ValueError(f"Invalid session_filter {session_filter}. Valid session_filters are "
-                             f"{valid_session_filters}")
+            raise ValueError(
+                f"Invalid session_filter {session_filter}. Valid session_filters are " f"{valid_session_filters}"
+            )
 
         # Create payload
         payload = {
-            'symbol': symbol,
-            'interval': f"{interval}min",
-            'session_filter': session_filter.lower(),
+            "symbol": symbol,
+            "interval": f"{interval}min",
+            "session_filter": session_filter.lower(),
         }
         if start_date:
-            payload['start'] = self.date2str(start_date, include_min=True)
+            payload["start"] = self.date2str(start_date, include_min=True)
         if end_date:
-            payload['end'] = self.date2str(end_date, include_min=True)
+            payload["end"] = self.date2str(end_date, include_min=True)
 
         response = self.request(self.TIME_AND_SALES_ENDPOINT, payload)
-        if 'data' not in response['series']:
-            raise LookupError(f"No Time and Sales found for: Symbol={payload['symbol']}, start={payload['start']}, "
-                              f"end={payload['end']}")
+        if response["series"] is None or "data" not in response["series"]:
+            raise LookupError(
+                f"No Time and Sales found for: Symbol={payload['symbol']}, start={payload['start']}, "
+                f"end={payload['end']}"
+            )
 
-        quotes = response['series']['data']
+        quotes = response["series"]["data"]
         quotes = quotes if isinstance(quotes, list) else [quotes]  # Can happen if start == end
         df = pd.json_normalize(quotes)
-        df['datetime'] = pd.to_datetime(df['time']).dt.tz_localize("US/Eastern")
-        return df.set_index('datetime')
+        df["datetime"] = pd.to_datetime(df["time"]).dt.tz_localize("US/Eastern")
+        return df.set_index("datetime")
 
-    def get_option_expirations(self, symbol: str, strikes=True, contract_size=True, expiration_type=True,
-                               include_all_roots=False) -> pd.DataFrame:
+    def get_option_expirations(
+        self, symbol: str, strikes=True, contract_size=True, expiration_type=True, include_all_roots=False
+    ) -> pd.DataFrame:
         """
         Get option expirations for a symbol.
 
@@ -210,28 +215,28 @@ class MarketData(TradierApiBase):
         """
         # Create payload
         payload = {
-            'symbol': symbol,
-            'strikes': strikes,
-            'contractSize': contract_size,
-            'expirationType': expiration_type,
-            'includeAllRoots': include_all_roots,
+            "symbol": symbol,
+            "strikes": strikes,
+            "contractSize": contract_size,
+            "expirationType": expiration_type,
+            "includeAllRoots": include_all_roots,
         }
 
         # Get response
         response = self.request(self.OPTION_EXPIRATIONS_ENDPOINT, payload)
 
-        if not response['expirations'] or 'expiration' not in response['expirations']:
+        if not response["expirations"] or "expiration" not in response["expirations"]:
             raise LookupError(f"No Option Expirations found for: Symbol={payload['symbol']}")
 
         # Parse response
-        expirations = response['expirations']['expiration']
+        expirations = response["expirations"]["expiration"]
         expirations = expirations if isinstance(expirations, list) else [expirations]
         df = pd.json_normalize(expirations)
 
         # Clean up names and set index to be the date (not datetime)
-        df = df.rename(columns={'strikes.strike': 'strikes'})
-        df['date'] = pd.to_datetime(df['date']).dt.date
-        return df.set_index('date')
+        df = df.rename(columns={"strikes.strike": "strikes"})
+        df["date"] = pd.to_datetime(df["date"]).dt.date
+        return df.set_index("date")
 
     def get_option_chains(self, symbol: str, expiration: Union[dt.date | str], greeks=False) -> pd.DataFrame:
         """
@@ -247,23 +252,24 @@ class MarketData(TradierApiBase):
         """
         # Create payload
         payload = {
-            'symbol': symbol,
-            'expiration': self.date2str(expiration),
-            'greeks': greeks,
+            "symbol": symbol,
+            "expiration": self.date2str(expiration),
+            "greeks": greeks,
         }
 
         # Get response
         response = self.request(self.OPTION_CHAIN_ENDPOINT, payload)
 
-        if not response['options'] or 'option' not in response['options']:
-            raise LookupError(f"No Option Chains found for: Symbol={payload['symbol']}, "
-                              f"Expiration={payload['expiration']}")
+        if not response["options"] or "option" not in response["options"]:
+            raise LookupError(
+                f"No Option Chains found for: Symbol={payload['symbol']}, " f"Expiration={payload['expiration']}"
+            )
 
         # Parse response
-        chains = response['options']['option']
+        chains = response["options"]["option"]
         chains = chains if isinstance(chains, list) else [chains]
         df = pd.json_normalize(chains)
-        df['expiration_date'] = pd.to_datetime(df['expiration_date']).dt.date
+        df["expiration_date"] = pd.to_datetime(df["expiration_date"]).dt.date
         return df
 
     def get_option_strikes(self, symbol: str, expiration: Union[dt.date | str]) -> list[float]:
@@ -278,23 +284,30 @@ class MarketData(TradierApiBase):
         """
         # Create payload
         payload = {
-            'symbol': symbol,
-            'expiration': self.date2str(expiration),
+            "symbol": symbol,
+            "expiration": self.date2str(expiration),
         }
 
         # Get response
         response = self.request(self.OPTION_STRIKES_ENDPOINT, payload)
 
-        if not response['strikes'] or 'strike' not in response['strikes']:
-            raise LookupError(f"No Option Strikes found for: Symbol={payload['symbol']}, "
-                              f"Expiration={payload['expiration']}")
+        if not response["strikes"] or "strike" not in response["strikes"]:
+            raise LookupError(
+                f"No Option Strikes found for: Symbol={payload['symbol']}, " f"Expiration={payload['expiration']}"
+            )
 
         # Parse response
-        strikes = response['strikes']['strike']
+        strikes = response["strikes"]["strike"]
         return strikes if isinstance(strikes, list) else [strikes]
 
-    def get_option_symbol(self, symbol: str, expiration: Union[dt.date | str], strike: float, option_type: str,
-                          chains: Union[pd.DataFrame | None] = None) -> str:
+    def get_option_symbol(
+        self,
+        symbol: str,
+        expiration: Union[dt.date | str],
+        strike: float,
+        option_type: str,
+        chains: Union[pd.DataFrame | None] = None,
+    ) -> str:
         """
         Get option symbol for a symbol, expiration, strike, and option type.
 
@@ -310,10 +323,12 @@ class MarketData(TradierApiBase):
         """
         if not isinstance(chains, pd.DataFrame) or chains.empty:
             chains = self.get_option_chains(symbol, expiration)
-        symbol = chains.loc[(chains['strike'] == strike) & (chains['option_type'] == option_type.lower())]['symbol']
+        symbol = chains.loc[(chains["strike"] == strike) & (chains["option_type"] == option_type.lower())]["symbol"]
         if len(symbol) == 0:
-            raise LookupError(f"No Option Symbol found for: Symbol={symbol}, Expiration={expiration}, Strike={strike}, "
-                              f"Option Type={option_type}")
+            raise LookupError(
+                f"No Option Symbol found for: Symbol={symbol}, Expiration={expiration}, Strike={strike}, "
+                f"Option Type={option_type}"
+            )
 
         return symbol.iloc[0]
 
@@ -326,7 +341,7 @@ class MarketData(TradierApiBase):
         :return: Dictionary of market clock information. See Tradier weblink for key definitions.
         """
         response = self.request(self.CLOCK_ENDPOINT)
-        return response['clock']
+        return response["clock"]
 
     def get_calendar(self, month: int, year: int) -> pd.DataFrame:
         """
@@ -340,25 +355,26 @@ class MarketData(TradierApiBase):
         """
         # Create payload
         payload = {
-            'month': f"{month:02d}",
-            'year': str(year),
+            "month": f"{month:02d}",
+            "year": str(year),
         }
 
         # Get response
         response = self.request(self.CALENDAR_ENDPOINT, payload)
 
-        if not response['calendar'] or 'days' not in response['calendar']:
+        if not response["calendar"] or "days" not in response["calendar"]:
             raise LookupError(f"No Calendar found for: Month={payload['month']}, Year={payload['year']}")
 
         # Parse response
-        calendar = response['calendar']['days']['day']
+        calendar = response["calendar"]["days"]["day"]
         calendar = calendar if isinstance(calendar, list) else [calendar]
         df = pd.json_normalize(calendar)
-        df['date'] = pd.to_datetime(df['date']).dt.date
-        return df.set_index('date')
+        df["date"] = pd.to_datetime(df["date"]).dt.date
+        return df.set_index("date")
 
-    def lookup_symbol(self, query: str, exchanges: Union[str | list | None] = None,
-                      types: Union[str | list | None] = None) -> pd.DataFrame:
+    def lookup_symbol(
+        self, query: str, exchanges: Union[str | list | None] = None, types: Union[str | list | None] = None
+    ) -> pd.DataFrame:
         """
         Lookup a symbol.
 
@@ -369,32 +385,34 @@ class MarketData(TradierApiBase):
         :param types: List or Comma separated list of types to lookup. Valid values are: stock, option etf, index
         :return: DataFrame of symbols. See Tradier weblink for column definitions.
         """
-        valid_types = ['stock', 'option', 'etf', 'index']
+        valid_types = ["stock", "option", "etf", "index"]
         if types:
             if isinstance(types, str):
-                types = types.split(',')
+                types = types.split(",")
             for t in types:
                 if t.lower() not in valid_types:
                     raise ValueError(f"Invalid type {t}. Valid types are {valid_types}")
 
         # Create payload
         payload = {
-            'q': query,
+            "q": query,
         }
         if exchanges:
-            payload['exchanges'] = exchanges if isinstance(exchanges, str) else ','.join(exchanges)
+            payload["exchanges"] = exchanges if isinstance(exchanges, str) else ",".join(exchanges)
         if types:
-            payload['types'] = types if isinstance(types, str) else ','.join(types)
+            payload["types"] = types if isinstance(types, str) else ",".join(types)
 
         # Get response
         response = self.request(self.LOOKUP_SYMBOL_ENDPOINT, payload)
 
-        if not response['securities'] or 'security' not in response['securities']:
-            raise LookupError(f"No Symbols found for: Query={payload['q']}, Exchanges={payload['exchanges']}, "
-                              f"Types={payload['types']}")
+        if not response["securities"] or "security" not in response["securities"]:
+            raise LookupError(
+                f"No Symbols found for: Query={payload['q']}, Exchanges={payload['exchanges']}, "
+                f"Types={payload['types']}"
+            )
 
         # Parse response
-        securities = response['securities']['security']
+        securities = response["securities"]["security"]
         securities = securities if isinstance(securities, list) else [securities]
         df = pd.json_normalize(securities)
         return df
