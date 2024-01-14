@@ -116,6 +116,18 @@ This section provides example functionality of the existing codebase. Additional
   )
   ```
 
+  - Get Options Chains:
+
+  ```python
+  tradier.market.get_chains(symbol, expiration, greeks=True)
+  ```
+
+  - Get Options Expirations:
+  
+    ```python
+    tradier.market.get_options_expirations(symbol, strikes=True)
+    ```
+
 ## Development
 
 To contribute or make changes to the `lumiwealth-tradier` package, feel free to create a fork, clone the fork, make some improvements and issue a pull request. From the terminal/command prompt:
