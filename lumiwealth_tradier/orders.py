@@ -3,7 +3,7 @@ from typing import Union
 
 import pandas as pd
 
-from .base import TradierApiBase
+from .base import TradierApiBase, TradierApiError
 
 
 class Orders(TradierApiBase):
@@ -26,7 +26,13 @@ class Orders(TradierApiBase):
         :param order_id: Order ID reported by the order() or order_option() functions
         :return: json object
         """
-        response = self.delete(f"{self.ORDER_ENDPOINT}/{order_id}")
+        try:
+            response = self.delete(f"{self.ORDER_ENDPOINT}/{order_id}")
+        except TradierApiError as e:
+            if "400 - order already in finalized state" in str(e):
+                return {"id": order_id, "status": "ok"}
+            else:
+                raise e
         return response['order']
 
     def get_order(self, order_id: Union[int | str], include_tag=True) -> pd.DataFrame:
@@ -50,35 +56,35 @@ class Orders(TradierApiBase):
 
     def get_orders(self, include_tag=True) -> pd.DataFrame:
         """
-            This function returns a pandas DataFrame.
-            Each row denotes a queued order. Each column contiains a feature_variable pertaining to the order.
+        This function returns a pandas DataFrame.
+        Each row denotes a queued order. Each column contiains a feature_variable pertaining to the order.
 
-            Documentation: https://documentation.tradier.com/brokerage-api/accounts/get-account-orders
+        Documentation: https://documentation.tradier.com/brokerage-api/accounts/get-account-orders
 
-            Transposed sample output has the following structure:
+        Transposed sample output has the following structure:
 
-            >>> tradier_orders = orders(account_number='<id>', auth_token='<token>')
-            >>> df_orders = tradier_orders.get_orders()
-                                                       0                         1
-            id                                   8248093                   8255194
-            type                              stop_limit                    market
-            symbol                                   UNP                        CF
-            side                                     buy                       buy
-            quantity                                 3.0                      10.0
-            status                                  open                    filled
-            duration                                 day                       gtc
-            price                                  200.0                       NaN
-            avg_fill_price                           0.0                     87.39
-            exec_quantity                            0.0                      10.0
-            last_fill_price                          0.0                     87.39
-            last_fill_quantity                       0.0                      10.0
-            remaining_quantity                       3.0                       0.0
-            stop_price                             200.0                       NaN
-            create_date         2023-09-25T20:29:10.351Z  2023-09-26T14:45:00.155Z
-            transaction_date    2023-09-26T12:30:19.152Z  2023-09-26T14:45:00.216Z
-            class                                 equity                    equity
+        >>> tradier_orders = orders(account_number='<id>', auth_token='<token>')
+        >>> df_orders = tradier_orders.get_orders()
+                                                   0                         1
+        id                                   8248093                   8255194
+        type                              stop_limit                    market
+        symbol                                   UNP                        CF
+        side                                     buy                       buy
+        quantity                                 3.0                      10.0
+        status                                  open                    filled
+        duration                                 day                       gtc
+        price                                  200.0                       NaN
+        avg_fill_price                           0.0                     87.39
+        exec_quantity                            0.0                      10.0
+        last_fill_price                          0.0                     87.39
+        last_fill_quantity                       0.0                      10.0
+        remaining_quantity                       3.0                       0.0
+        stop_price                             200.0                       NaN
+        create_date         2023-09-25T20:29:10.351Z  2023-09-26T14:45:00.155Z
+        transaction_date    2023-09-26T12:30:19.152Z  2023-09-26T14:45:00.216Z
+        class                                 equity                    equity
 
-            :param include_tag: Include the tag column in the DataFrame. Default is True.
+        :param include_tag: Include the tag column in the DataFrame. Default is True.
         """
         payload = {
             'includeTags': include_tag,
