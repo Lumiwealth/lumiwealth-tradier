@@ -48,7 +48,7 @@ class Account(TradierApiBase):
             account.last_update_date 		2021-06-23T22:04:20.000Z
         """
         data = self.request(endpoint=self.PROFILE_ENDPOINT)
-        return pd.json_normalize(data['profile'])
+        return pd.json_normalize(data["profile"])
 
     def get_account_balance(self) -> pd.DataFrame:
         """
@@ -95,38 +95,47 @@ class Account(TradierApiBase):
             margin.sweep                   0
         """
         data = self.request(endpoint=self.ACCOUNT_BALANCE_ENDPOINT)
-        return pd.json_normalize(data['balances'])
+        return pd.json_normalize(data["balances"])
 
     def get_gainloss(self) -> pd.DataFrame:
         """
-            Get cost basis information for a specific user account.
-            This includes information for all closed positions.
-            Cost basis information is updated through a nightly batch reconciliation process with tradier clearing firm.
+        Get cost basis information for a specific user account.
+        This includes information for all closed positions.
+        Cost basis information is updated through a nightly batch reconciliation process with tradier clearing firm.
 
-            Returns:
-                Pandas dataframe with columns [close_date, cost, gain_loss, gain_loss_percent, open_date, proceeds,
-                quantity, symbol, term]
+        Returns:
+            Pandas dataframe with columns [close_date, cost, gain_loss, gain_loss_percent, open_date, proceeds,
+            quantity, symbol, term]
 
-            Example:
-                >>> account = Account(account_number='<account_id>', auth_token='<token>'
-                >>> account.get_gainloss().head()
-                        close_date      cost  gain_loss  gain_loss_percent proceeds  quantity          symbol  term
-                0  2023-09-13T00:00:00.000Z  194700.0   -30600.0  -15.72  164100.0    10.0  LMT240119C00260000    19
-                1  2023-09-13T00:00:00.000Z   10212.2     -432.6   -4.24    9779.6    20.0                KLAC     7
-                2  2023-09-13T00:00:00.000Z    2300.0      175.0    7.61    2475.0    1.0   HAL251219C00018000    20
-                3  2023-09-13T00:00:00.000Z   20700.0     1620.0    7.83   22320.0    9.0  H AL251219C00018000    20
-                4  2023-09-06T00:00:00.000Z   16967.0     -193.0   -1.14   16774.0    100.0                TXN     5
+        Example:
+            >>> account = Account(account_number='<account_id>', auth_token='<token>'
+            >>> account.get_gainloss().head()
+                    close_date      cost  gain_loss  gain_loss_percent proceeds  quantity          symbol  term
+            0  2023-09-13T00:00:00.000Z  194700.0   -30600.0  -15.72  164100.0    10.0  LMT240119C00260000    19
+            1  2023-09-13T00:00:00.000Z   10212.2     -432.6   -4.24    9779.6    20.0                KLAC     7
+            2  2023-09-13T00:00:00.000Z    2300.0      175.0    7.61    2475.0    1.0   HAL251219C00018000    20
+            3  2023-09-13T00:00:00.000Z   20700.0     1620.0    7.83   22320.0    9.0  H AL251219C00018000    20
+            4  2023-09-06T00:00:00.000Z   16967.0     -193.0   -1.14   16774.0    100.0                TXN     5
         """
         data = self.request(endpoint=self.ACCOUNT_GAINLOSS_ENDPOINT)
-        return pd.json_normalize(data['gainloss']['closed_position'])
+
+        # If gainloss was not returned, return None
+        if not data.get("gainloss"):
+            return None
+
+        # If there are no closed positions in the gailloss dict, return an empty dataframe
+        if not isinstance(data["gainloss"], dict) or not data["gainloss"].get("closed_position"):
+            return None
+
+        return pd.json_normalize(data["gainloss"]["closed_position"])
 
     def get_history(
-            self,
-            start_date: Union[dt.datetime | dt.date | str | None] = None,
-            end_date: Union[dt.datetime | dt.date | str | None] = None,
-            limit: Union[int | None] = None,  # Tradier default if not specified is only 25
-            activity_type: Union[str | None] = None,
-            symbol: Union[str | None] = None,
+        self,
+        start_date: Union[dt.datetime | dt.date | str | None] = None,
+        end_date: Union[dt.datetime | dt.date | str | None] = None,
+        limit: Union[int | None] = None,  # Tradier default if not specified is only 25
+        activity_type: Union[str | None] = None,
+        symbol: Union[str | None] = None,
     ) -> pd.DataFrame:
         """
         Get account activity history
@@ -145,27 +154,37 @@ class Account(TradierApiBase):
 
         """
         valid_activity_types = [
-            'trade', 'option', 'ach', 'wire', 'dividend', 'fee', 'tax', 'journal', 'check', 'transfer', 'adjustment',
-            'interest'
+            "trade",
+            "option",
+            "ach",
+            "wire",
+            "dividend",
+            "fee",
+            "tax",
+            "journal",
+            "check",
+            "transfer",
+            "adjustment",
+            "interest",
         ]
         params = {
-            'start': self.date2str(start_date),
-            'end': self.date2str(end_date),
+            "start": self.date2str(start_date),
+            "end": self.date2str(end_date),
         }
 
         if activity_type:
             if activity_type.lower() not in valid_activity_types:
-                raise ValueError(f'activity_type ({activity_type}) must be one of {valid_activity_types}')
-            params['type'] = activity_type.lower()
+                raise ValueError(f"activity_type ({activity_type}) must be one of {valid_activity_types}")
+            params["type"] = activity_type.lower()
 
         if symbol:
-            params['symbol'] = symbol.upper()
+            params["symbol"] = symbol.upper()
 
         if limit:
-            params['limit'] = limit
+            params["limit"] = limit
 
         data = self.request(endpoint=self.ACCOUNT_HISTORY_ENDPOINT, params=params)
-        return pd.json_normalize(data['history']['event'])
+        return pd.json_normalize(data["history"]["event"])
 
     def get_positions(self, symbols=False, equities=False, options=False):
         """
@@ -205,12 +224,12 @@ class Account(TradierApiBase):
         """
         data = self.request(endpoint=self.ACCOUNT_POSITIONS_ENDPOINT)
         if data:
-            positions_df = pd.DataFrame(data['positions']['position'])
+            positions_df = pd.DataFrame(data["positions"]["position"])
             if symbols:
-                positions_df = positions_df.query('symbol in @symbols')
+                positions_df = positions_df.query("symbol in @symbols")
             if equities:
-                positions_df = positions_df[positions_df['symbol'].str.len() < 5]
+                positions_df = positions_df[positions_df["symbol"].str.len() < 5]
                 options = False
             if options:
-                positions_df = positions_df[positions_df['symbol'].str.len() > 5]
+                positions_df = positions_df[positions_df["symbol"].str.len() > 5]
             return positions_df

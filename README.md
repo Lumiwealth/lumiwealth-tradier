@@ -31,11 +31,11 @@ Steps to get started:
 
         `tradier_token=<YOUR_ACCESS_TOKEN_FROM_TRADIER_DASHBOARD>`
   * Within the aforementioned working directory, initiate a new python session (interactive python, jupyter notebook, etc.).
-  * To authenticate yourself, add the following lines of code to the top of your python script or jupyter notebook: <br>
+  * To authenticate yourself, add the following lines of code to the top of your python script or jupyter notebook: <br>    
       `import os, dotenv`
-      
-      `from lumiwealth_tradier import Tradier, Account, Quotes, EquityOrder, OptionsData, OptionsOrder`
-      
+
+      `from lumiwealth_tradier import Tradier`
+            
       `dotenv.load_dotenv()`
       
       `tradier_acct = os.getenv('tradier_acct')`
@@ -43,17 +43,7 @@ Steps to get started:
       `tradier_token = os.getenv('tradier_token')`
     
   * To instantiate the class objects, use: <br>
-      `tradier = Tradier(tradier_acct, tradier_token)`
-
-      `account = Account(tradier_acct, tradier_token)`
-
-      `quotes = Quotes(tradier_acct, tradier_token)`
-
-      `equity_order = EquityOrder(tradier_acct, tradier_token)`
-
-      `options_data = OptionsData(tradier_acct, tradier_token`
-
-      `options_order = OptionsOrder(tradier_acct, tradier_token)`
+      `tradier = Tradier(tradier_acct, tradier_token, is_paper=True) # is_paper=True for sandbox environment, if you have a real money account, set to False`
 
 ## Usage
 
@@ -63,61 +53,68 @@ This section provides example functionality of the existing codebase. Additional
 
 - Get User Profile:
 
-  `user_profile = account.get_user_profile()`
+  `user_profile = tradier.account.get_user_profile()`
 
 - Get Account Balance:
 
-  `account_balance = account.get_account_balance()`
+  `account_balance = tradier.account.get_account_balance()`
 
 - Get Gain/Loss:
 
-  `gain_loss = account.get_gainloss()`
+  `gain_loss = tradier.account.get_gainloss()`
 
 - Get Orders:
 
-  `orders = account.get_orders()`
+  `orders = tradier.orders.get_orders()`
 
 - Get Positions:
 
-  `positions = account.get_positions()`
+  `positions = tradier.account.get_positions()`
 
 ### Trading
 
 - Place Equity Order:
 
-  `order_response = equity_order.place_order('AAPL', 'buy', 1, 'limit', 150)`
+  `order_response = tradier.orders.order('AAPL', 'buy', 1, 'limit', 150)`
 
 - Place Options Order:
 
-  `order_response = options_order.place_order('AAPL210917C00125000', 'buy_to_open', 1, 'limit', 3.5)`
+  `order_response = tradier.orders.order('AAPL210917C00125000', 'buy_to_open', 1, 'limit', 3.5)`
 
 ### Market Data
 
+- Get Last Price:
+
+  `last_price = tradier.market.get_last_price('SPY')`
+
 - Get Quotes:
 
-  `quotes_data = quotes.get_quote_day('AAPL')`
+  `quotes_data = tradier.market.get_quotes(["AAPL", "MSFT", "SPY"])`
 
-- Get Historical Quotes:
+- Get Historical Quotes and Get Time Sales:
 
-  `historical_data = quotes.get_historical_quotes('AAPL')`
+  ```python
+  from datetime import datetime, timedelta
 
-- Get Time Sales:
+  start_date = datetime.now() - timedelta(days=10)
+  end_date = datetime.now()
 
-  `timesales = quotes.get_timesales('AAPL')`
+  historical_data = tradier.market.get_historical_quotes(
+      "AAPL",
+      interval="daily",  # Can be "daily", "weekly", or "monthly"
+      start_date=start_date,
+      end_date=end_date,
+      session_filter="all",  # Can be "all" or "open"
+  )
 
-### Options Data
-
-- Get Options Chains:
-
-  `options_chains = options_data.get_options_chain('AAPL')`
-
-- Get Options Strikes:
-
-  `options_strikes = options_data.get_options_strikes('AAPL')`
-
-- Get Options Expirations:
-
-  `options_expirations = options_data.get_options_expirations('AAPL')`
+  timesales = tradier.market.get_timesales(
+      "MSFT",
+      interval=1,  # Can be 1, 5 or 15
+      start_date=start_date,
+      end_date=end_date,
+      session_filter="all",  # Can be "all" or "open"
+  )
+  ```
 
 ## Development
 
