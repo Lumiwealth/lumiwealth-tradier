@@ -1,3 +1,4 @@
+import datetime as dt
 import os
 import re
 
@@ -54,14 +55,18 @@ class TestMarket:
             tradier.market.get_timesales('SPY', start_date='2023-12-01', end_date='2023-12-07',
                                          session_filter='bad_session_filter')
 
-        df = tradier.market.get_timesales('SPY', start_date='2023-12-01 09:30', end_date='2023-12-01 09:45')
+        today = dt.date.today()
+        recent_date = tradier.market.get_previous_trading_day(today)
+        start_date = dt.datetime.combine(recent_date, dt.time(9, 30))
+        end_date = dt.datetime.combine(recent_date, dt.time(9, 45))
+        df = tradier.market.get_timesales('SPY', start_date=start_date, end_date=end_date)
         assert len(df)
         assert 'price' in df.columns
         assert df.iloc[0]['price'] > 0
 
         mocker.patch.object(tradier.market, 'request', return_value={'series': 'null'})
         with pytest.raises(LookupError):
-            tradier.market.get_timesales('SPY', start_date='2023-12-01 09:30', end_date='2023-12-01 09:45')
+            tradier.market.get_timesales('SPY', start_date=start_date, end_date=end_date)
 
     def test_option_expirations(self, tradier):
         df = tradier.market.get_option_expirations('SPY')
@@ -154,3 +159,13 @@ class TestMarket:
 
         with pytest.raises(LookupError):
             tradier.market.lookup_symbol('bad_symbol')
+
+    def test_get_previous_trading_day(self, tradier):
+        today = dt.date.today()
+        trading_day = tradier.market.get_previous_trading_day()
+        assert isinstance(trading_day, dt.date)
+        assert trading_day < today
+        assert trading_day.weekday() < 5
+        assert trading_day > today - dt.timedelta(days=7)
+
+        assert tradier.market.get_previous_trading_day(today) == trading_day
