@@ -3,7 +3,7 @@ from typing import Union
 
 import pandas as pd
 
-from .base import TradierApiBase
+from .base import TradierApiBase, TradierApiError
 
 
 class Orders(TradierApiBase):
@@ -26,8 +26,15 @@ class Orders(TradierApiBase):
         :param order_id: Order ID reported by the order() or order_option() functions
         :return: json object
         """
-        response = self.delete(f"{self.ORDER_ENDPOINT}/{order_id}")
-        return response["order"]
+
+        try:
+            response = self.delete(f"{self.ORDER_ENDPOINT}/{order_id}")
+        except TradierApiError as e:
+            if "400 - order already in finalized state" in str(e):
+                return {"id": order_id, "status": "ok"}
+            else:
+                raise e
+        return response['order']
 
     def get_order(self, order_id: Union[int | str], include_tag=True) -> pd.DataFrame:
         """

@@ -38,11 +38,17 @@ class TestOrders:
         with pytest.raises(ValueError):
             tradier.orders.order(symbol='AAPL', quantity=1, side='buy_to_open', order_type='market', tag='unittest')
 
+        # Submit basic order
         basic_order = tradier.orders.order(symbol='AAPL', quantity=1, side='buy', order_type='market', tag='unittest')
         assert isinstance(basic_order, dict)
         assert 'id' in basic_order.keys()
         assert 'status' in basic_order.keys()
         assert basic_order['id'] > 0
+
+        # Retrieve order status
+        order_status = tradier.orders.get_order(basic_order['id'])
+        assert 'id' in order_status.columns
+        assert order_status['id'].iloc[0] == basic_order['id']
 
         # Cancel the testing order once we are done
         resp = tradier.orders.cancel(basic_order['id'])
@@ -59,7 +65,9 @@ class TestOrders:
         df_expr = tradier.market.get_option_expirations('SPY')
         assert df_expr is not None
         expr_date = df_expr.index[1]
-        strike = df_expr.iloc[0]['strikes'][0]
+        # Pick a strike from the middle of the list
+        strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
+        strike = df_expr.iloc[0]['strikes'][strk_idx]
         chains_df = tradier.market.get_option_chains('SPY', expr_date)
         assert chains_df is not None
         option_symbol = chains_df[

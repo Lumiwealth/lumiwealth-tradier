@@ -416,3 +416,21 @@ class MarketData(TradierApiBase):
         securities = securities if isinstance(securities, list) else [securities]
         df = pd.json_normalize(securities)
         return df
+
+    def get_previous_trading_day(self, date: Union[dt.datetime | dt.date | str | None] = None) -> dt.date:
+        """
+        Get the previous trading day.
+
+        :param date: Date to get the previous trading day for. If None, will use today.
+        :return: Previous trading day.
+        """
+        if not date:
+            date = dt.date.today()
+
+        # Get calendar for the month of the date
+        calendar = self.get_calendar(date.month, date.year)
+
+        # Get the previous trading day
+        previous_trading_day = calendar[(calendar["status"] == "open") & (calendar.index < date)].index[-1]
+
+        return previous_trading_day
