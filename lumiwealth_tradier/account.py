@@ -224,7 +224,18 @@ class Account(TradierApiBase):
         """
         data = self.request(endpoint=self.ACCOUNT_POSITIONS_ENDPOINT)
         if data:
-            positions_df = pd.DataFrame(data["positions"]["position"])
+            # If there are no positions, return an empty DataFrame
+            if not data.get("positions") or data["positions"] == "null":
+                return pd.DataFrame()
+
+            # Convert the position data to a list if it is not already (needed if exactly 1 position)
+            position_data = data["positions"]["position"]
+            if not isinstance(position_data, list):
+                position_data = [position_data]
+
+            # Create the DataFrame
+            positions_df = pd.DataFrame(position_data)
+
             if symbols:
                 positions_df = positions_df.query("symbol in @symbols")
             if equities:
