@@ -131,11 +131,11 @@ class Account(TradierApiBase):
 
     def get_history(
         self,
-        start_date: Union[dt.datetime | dt.date | str | None] = None,
-        end_date: Union[dt.datetime | dt.date | str | None] = None,
-        limit: Union[int | None] = None,  # Tradier default if not specified is only 25
-        activity_type: Union[str | None] = None,
-        symbol: Union[str | None] = None,
+        start_date: Union[dt.datetime, dt.date, str, None] = None,
+        end_date: Union[dt.datetime, dt.date, str, None] = None,
+        limit: Union[int, None] = None,  # Tradier default if not specified is only 25
+        activity_type: Union[str, None] = None,
+        symbol: Union[str, None] = None,
     ) -> pd.DataFrame:
         """
         Get account activity history
