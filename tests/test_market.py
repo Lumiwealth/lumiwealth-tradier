@@ -69,7 +69,7 @@ class TestMarket:
             tradier.market.get_timesales('SPY', start_date=start_date, end_date=end_date)
 
     def test_option_expirations(self, tradier):
-        df = tradier.market.get_option_expirations('SPY')
+        df = tradier.market.get_option_expirations('SPY', include_all_roots=True)
         assert df is not None
         assert len(df) > 0
         assert 'strikes' in df.columns

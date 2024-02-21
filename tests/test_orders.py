@@ -2,6 +2,7 @@ import os
 
 import pytest
 
+from lumiwealth_tradier.base import TradierApiError
 from lumiwealth_tradier.tradier import Tradier
 
 
@@ -35,7 +36,7 @@ class TestOrders:
 
     def test_stock_order(self, tradier):
         # Invalid side for stocks
-        with pytest.raises(ValueError):
+        with pytest.raises(TradierApiError):
             tradier.orders.order(symbol='AAPL', quantity=1, side='buy_to_open', order_type='market', tag='unittest')
 
         # Submit basic order
