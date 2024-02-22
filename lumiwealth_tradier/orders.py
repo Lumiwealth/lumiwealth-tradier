@@ -35,9 +35,9 @@ class Orders(TradierApiBase):
                 return {"id": order_id, "status": "ok"}
             else:
                 raise e
-        return response['order']
+        return response["order"]
 
-    def get_order(self, order_id: Union[int | str], include_tag=True) -> pd.DataFrame:
+    def get_order(self, order_id: Union[int, str], include_tag=True) -> pd.DataFrame:
         """
         Get a specific order based upon the order ID returned by Tradier after submission.
 
@@ -103,8 +103,8 @@ class Orders(TradierApiBase):
         self,
         order_id: int,
         duration: str = "",
-        limit_price: Union[float | None] = None,
-        stop_price: Union[float | None] = None,
+        limit_price: Union[float, None] = None,
+        stop_price: Union[float, None] = None,
     ) -> dict:
         """
         Modify an existing order. I.e. change the stoploss price. Quantity cannot be changed, only the price or
@@ -138,12 +138,12 @@ class Orders(TradierApiBase):
         self,
         symbol: str,
         side: str,
-        quantity: Union[int | float],
+        quantity: Union[int, float],
         order_type: str,
         option_symbol: str = "",
         duration="day",
-        limit_price: Union[float | None] = None,
-        stop_price: Union[float | None] = None,
+        limit_price: Union[float, None] = None,
+        stop_price: Union[float, None] = None,
         tag: str = "",
         order_class: str = "equity",
     ) -> dict:
@@ -197,11 +197,11 @@ class Orders(TradierApiBase):
         asset_symbol: str,
         option_symbol: str,
         side: str,
-        quantity: Union[int | float],
+        quantity: Union[int, float],
         order_type: str,
         duration="day",
-        limit_price: Union[float | None] = None,
-        stop_price: Union[float | None] = None,
+        limit_price: Union[float, None] = None,
+        stop_price: Union[float, None] = None,
         tag: str = "",
     ) -> dict:
         """
