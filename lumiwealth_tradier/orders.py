@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Union
 
@@ -241,9 +242,9 @@ class Orders(TradierApiBase):
     @staticmethod
     def _update_order_payload(payload, limit_price, order_type, stop_price, tag):
         if order_type.lower() == "limit" or order_type.lower() == "stop_limit":
-            payload["price"] = limit_price
+            payload["price"] = round(limit_price, 2)
         if order_type.lower() == "stop" or order_type.lower() == "stop_limit":
-            payload["stop"] = stop_price
+            payload["stop"] = round(stop_price, 2)
         if tag:
             payload["tag"] = tag
 
