@@ -6,6 +6,13 @@ import pandas as pd
 
 from .base import TradierApiBase, TradierApiError
 
+class OrderLeg:
+    def __init__(self, option_symbol: str, side: str, quantity: int, price: float = None):
+        self.option_symbol = option_symbol
+        self.side = side
+        self.quantity = quantity
+        self.price = price
+
 
 class Orders(TradierApiBase):
     def __init__(self, account_number, auth_token, is_paper=True):
@@ -50,7 +57,9 @@ class Orders(TradierApiBase):
         payload = {
             "includeTags": include_tag,
         }
-        data = self.request(endpoint=f"{self.ORDER_ENDPOINT}/{order_id}", params=payload)
+        data = self.request(
+            endpoint=f"{self.ORDER_ENDPOINT}/{order_id}", params=payload
+        )
         if "order" not in data:
             return pd.DataFrame()
 
@@ -234,9 +243,83 @@ class Orders(TradierApiBase):
             "type": order_type.lower(),
             "duration": duration.lower(),
         }
-        self._update_order_payload(payload, limit_price, order_type, stop_price, tag)
+        payload = self._update_order_payload(
+            payload, limit_price, order_type, stop_price, tag
+        )
 
+        # Send the request to the Tradier API
         response = self.send(self.ORDER_ENDPOINT, payload)
+
+        # Return the response
+        return response["order"]
+
+    def multileg_order(
+        self,
+        symbol: str,
+        order_type: str,
+        duration: str,
+        legs: list[OrderLeg],
+        price: float = None,
+        tag: str = "",
+    ) -> dict:
+        """
+        Place a multi-leg order with the Tradier API.
+
+        :param symbol: The symbol of the underlying asset for the options.
+        :param order_type: The type of order ('market', 'debit', 'credit', 'even').
+        :param duration: The duration of the order ('day', 'gtc', 'pre', 'post').
+        :param legs: A list of OrderLeg objects, each representing one leg of the multi-leg order.
+        :param price: The price for the order, required only for 'debit' and 'credit' orders.
+        :param tag: An optional tag for the order.
+        :return: A dictionary representing the API's response.
+        """
+        # Ensure there are no more than 4 legs
+        if len(legs) > 4:
+            raise ValueError("A multi-leg order can have up to 4 legs.")
+
+        # Start constructing the data payload
+        data = {
+            "class": "multileg",
+            "symbol": symbol.upper(),
+            "type": order_type.lower(),
+            "duration": duration.lower(),
+        }
+
+        if price is not None:
+            data["price"] = price
+
+        if tag:
+            data["tag"] = tag
+
+        # Add the details of each leg to the data payload
+        for index, leg in enumerate(legs):
+            # Check the validity of the leg data
+            if not isinstance(leg, OrderLeg):
+                raise ValueError(f"Leg at index {index} is not an OrderLeg object.")
+
+            if leg.side.lower() not in [
+                "buy_to_open",
+                "buy_to_close",
+                "sell_to_open",
+                "sell_to_close",
+            ]:
+                raise ValueError(
+                    f"Invalid side for leg at index {index}. Must be one of ['buy_to_open', 'buy_to_close', 'sell_to_open', 'sell_to_close']"
+                )
+
+            if not isinstance(leg.quantity, int) or leg.quantity <= 0:
+                raise ValueError(
+                    f"Invalid quantity for leg at index {index}. Must be a positive integer."
+                )
+
+            data[f"option_symbol[{index}]"] = leg.option_symbol.upper()
+            data[f"side[{index}]"] = leg.side.lower()
+            data[f"quantity[{index}]"] = int(leg.quantity)
+
+        # Send the request to the Tradier API
+        response = self.send(self.ORDER_ENDPOINT, data)
+
+        # Return the response
         return response["order"]
 
     @staticmethod
@@ -248,9 +331,13 @@ class Orders(TradierApiBase):
         if tag:
             payload["tag"] = tag
 
+        return payload
+
     def _check_order_inputs(self, duration, limit_price, order_type, stop_price, tag):
         if order_type.lower() not in self.valid_order_types:
-            raise ValueError(f"Invalid order_type. Must be one of {self.valid_order_types}")
+            raise ValueError(
+                f"Invalid order_type. Must be one of {self.valid_order_types}"
+            )
         if duration.lower() not in self.valid_durations:
             raise ValueError(f"Invalid duration. Must be one of {self.valid_durations}")
         if order_type.lower() in ["limit", "stop_limit"] and not limit_price:
@@ -259,4 +346,6 @@ class Orders(TradierApiBase):
             raise ValueError(f"Stop price is required for order_type {order_type}")
         # Check that 'tag' only has letters, mumbers and dash (-)
         if tag and not re.match(r"^[a-zA-Z0-9-]+$", tag):
-            raise ValueError(f"Invalid tag {tag}. Must be letters, numbers and dash (-) characters")
+            raise ValueError(
+                f"Invalid tag {tag}. Must be letters, numbers and dash (-) characters"
+            )

@@ -87,3 +87,102 @@ class TestOrders:
         resp = tradier.orders.cancel(option_order['id'])
         assert resp
         assert resp['id'] == option_order['id']
+
+    def test_option_order_multileg(self, tradier):
+        from lumiwealth_tradier.orders import OrderLeg
+
+        # Lookup Expiration Date, Strike, and Option Symbol
+        df_expr = tradier.market.get_option_expirations('SPY')
+        assert df_expr is not None
+        expr_date = df_expr.index[1]
+
+        # Pick a strike from the middle of the list
+        strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
+        strike = df_expr.iloc[0]['strikes'][strk_idx]
+        chains_df = tradier.market.get_option_chains('SPY', expr_date)
+        assert chains_df is not None
+
+        option_symbol_1 = chains_df[
+            (chains_df['strike'] == strike) & (chains_df['option_type'] == 'call')
+        ].iloc[0]['symbol']
+
+        option_symbol_2 = chains_df[
+            (chains_df['strike'] == strike) & (chains_df['option_type'] == 'put')
+        ].iloc[0]['symbol']
+
+        # Create multileg order legs
+        leg1 = OrderLeg(option_symbol=option_symbol_1, quantity=1, side='buy_to_open')
+        leg2 = OrderLeg(option_symbol=option_symbol_2, quantity=1, side='buy_to_open')
+
+        # Example assuming order_type and duration are required and correctly set
+        multileg_order = tradier.orders.multileg_order(
+            symbol='SPY',
+            order_type='market',  # or 'debit', 'credit', 'even', based on your requirement
+            duration='day',  # or 'gtc', 'pre', 'post'
+            legs=[leg1, leg2],
+            price=None,  # Assuming market order for the example
+            tag='unittest'
+        )
+        
+        # Check that status is ok
+        assert multileg_order['status'] == 'ok'
+
+        # Check it returned id
+        assert 'id' in multileg_order
+
+        # Check it returned a partner_id
+        assert 'partner_id' in multileg_order
+
+    # Test options order multileg with credit price
+    def test_option_order_multileg_credit(self, tradier):
+        from lumiwealth_tradier.orders import OrderLeg
+
+        # Lookup Expiration Date, Strike, and Option Symbol
+        df_expr = tradier.market.get_option_expirations('SPY')
+        assert df_expr is not None
+        expr_date = df_expr.index[1]
+
+        # Pick a strike from the middle of the list
+        strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
+        strike = df_expr.iloc[0]['strikes'][strk_idx]
+        chains_df = tradier.market.get_option_chains('SPY', expr_date)
+        assert chains_df is not None
+
+        option_symbol_1 = chains_df[
+            (chains_df['strike'] == strike) & (chains_df['option_type'] == 'call')
+        ].iloc[0]['symbol']
+
+        option_symbol_2 = chains_df[
+            (chains_df['strike'] == strike) & (chains_df['option_type'] == 'put')
+        ].iloc[0]['symbol']
+
+        # Create multileg order legs
+        leg1 = OrderLeg(option_symbol=option_symbol_1, quantity=1, side='buy_to_open')
+        leg2 = OrderLeg(option_symbol=option_symbol_2, quantity=1, side='buy_to_open')
+
+
+        ####
+        # TODO what should the order type be for an iron condor with limit prices??
+        ####
+
+        # # Get the order type for an iron condor
+        # order_type = tradier.orders.get_option_order_type('iron_condor')
+
+        # Example assuming order_type and duration are required and correctly set
+        multileg_order = tradier.orders.multileg_order(
+            symbol='SPY',
+            order_type="credit",
+            duration='day',  # or 'gtc', 'pre', 'post'
+            legs=[leg1, leg2],
+            price=0.01,  # Limit price
+            tag='unittest'
+        )
+        
+        # Check that status is ok
+        assert multileg_order['status'] == 'ok'
+
+        # Check it returned id
+        assert 'id' in multileg_order.keys()
+
+        # Check it returned a partner_id
+        assert 'partner_id' in multileg_order.keys()

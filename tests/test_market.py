@@ -27,6 +27,33 @@ class TestMarket:
             tradier.market.get_last_price('bad_symbol')
 
         assert tradier.market.get_last_price('AAPL') > 0
+        
+    def test_quote_options(self, tradier):
+        # Test getting a quote for an option
+        df_expr = tradier.market.get_option_expirations('SPY')
+        assert df_expr is not None
+        expr_date = df_expr.index[0]
+        strike = df_expr.iloc[0]['strikes'][0]
+
+        # Get the option chains
+        df = tradier.market.get_option_chains('SPY', expr_date)
+        assert df is not None
+        assert len(df) > 0
+        assert 'strike' in df.columns
+        assert df.iloc[0]['strike'] > 0
+
+        # Get the option symbols - lookup chains
+        symbol = tradier.market.get_option_symbol('SPY', expr_date, strike, 'call')
+        assert symbol is not None
+        assert isinstance(symbol, str)
+        assert symbol != ''
+        assert re.match(r'SPY\d+C\d+', symbol)
+
+        # Get the quote for the option
+        df = tradier.market.get_quotes([symbol])
+        assert df is not None
+        assert 'last' in df.columns
+        assert df.loc[symbol]['last'] > 0
 
     def test_historical_quote(self, tradier):
         # Multiple row return
