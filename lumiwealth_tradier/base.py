@@ -85,8 +85,9 @@ class TradierApiBase:
         else:
             raise ValueError(f"Invalid method {method}. Must be one of ['get', 'post', 'delete']")
 
-        # Check for errors in response
-        if r.status_code != 200:
+        # Check for errors in response from Tradier API. 
+        # 502 is a common error code when the API is down for a few seconds so we ignore it too.
+        if r.status_code != 200 and r.status_code != 201 and r.status_code != 502:
             raise TradierApiError(f"Error: {r.status_code} - {r.text}")
 
         ret_data = r.json()

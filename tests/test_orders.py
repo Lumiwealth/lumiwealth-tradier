@@ -160,14 +160,6 @@ class TestOrders:
         leg1 = OrderLeg(option_symbol=option_symbol_1, quantity=1, side='buy_to_open')
         leg2 = OrderLeg(option_symbol=option_symbol_2, quantity=1, side='buy_to_open')
 
-
-        ####
-        # TODO what should the order type be for an iron condor with limit prices??
-        ####
-
-        # # Get the order type for an iron condor
-        # order_type = tradier.orders.get_option_order_type('iron_condor')
-
         # Example assuming order_type and duration are required and correctly set
         multileg_order = tradier.orders.multileg_order(
             symbol='SPY',
