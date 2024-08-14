@@ -189,7 +189,7 @@ class Orders(TradierApiBase):
 
         payload = {
             "class": order_class,
-            "symbol": symbol.lower(),
+            "symbol": symbol.upper(),
             "option_symbol": option_symbol.upper(),
             "side": side.lower(),
             "quantity": int(quantity),
