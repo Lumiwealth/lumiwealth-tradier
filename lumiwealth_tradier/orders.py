@@ -7,11 +7,26 @@ import pandas as pd
 from .base import TradierApiBase, TradierApiError
 
 class OrderLeg:
-    def __init__(self, option_symbol: str, side: str, quantity: int, price: float = None):
+    def __init__(self, option_symbol: str = None, side: str = None, quantity: int = None, price: float = None, stock_symbol: str = None, stop: float = None, type: str = None):
+        """
+        Initializes an OrderLeg object with the given parameters.
+
+        :param option_symbol: The OCC option symbol for the leg.
+        :param side: The side of the order ('buy_to_open', 'buy_to_close', 'sell_to_open', 'sell_to_close').
+        :param quantity: The quantity of the leg.
+        :param price: The price for the leg.
+        :param stock_symbol: The symbol of the underlying stock for the option.
+        :param stop: The stop price for the leg.
+        :param type: The type of the order ('market', 'limit', 'stop', 'stop_limit').
+        """
+
         self.option_symbol = option_symbol
         self.side = side
         self.quantity = quantity
         self.price = price
+        self.stock_symbol = stock_symbol
+        self.stop = stop
+        self.type = type
 
 
 class Orders(TradierApiBase):
@@ -315,6 +330,73 @@ class Orders(TradierApiBase):
             data[f"option_symbol[{index}]"] = leg.option_symbol.upper()
             data[f"side[{index}]"] = leg.side.lower()
             data[f"quantity[{index}]"] = int(leg.quantity)
+
+        # Send the request to the Tradier API
+        response = self.send(self.ORDER_ENDPOINT, data)
+
+        # Return the response
+        return response["order"]
+    
+    def oco_order(
+        self,
+        duration: str,
+        legs: list[OrderLeg],
+        tag: str = "",
+    ) -> dict:
+        """
+        Place an OCO (One Cancels Other) order with the Tradier API.
+
+        :param duration: The duration of the order ('day', 'gtc', 'pre', 'post').
+        :param legs: A list of OrderLeg objects, each representing one leg of the OCO order.
+        :param tag: An optional tag for the order.
+        :return: A dictionary representing the API's response.
+        """
+
+        # Ensure there are exactly 2 legs
+        if len(legs) != 2:
+            raise ValueError("An OCO order must have exactly 2 legs.")
+
+        # Start constructing the data payload
+        data = {
+            "class": "oco",
+            "duration": duration.lower(),
+        }
+
+        if tag:
+            data["tag"] = tag
+
+        # Add the details of each leg to the data payload
+        for index, leg in enumerate(legs):
+            # Check the validity of the leg data
+            if not isinstance(leg, OrderLeg):
+                raise ValueError(f"Leg at index {index} is not an OrderLeg object.")
+
+            if leg.side.lower() not in [
+                "buy",
+                "buy_to_cover",
+                "sell",
+                "sell_short",
+                "buy_to_open",
+                "buy_to_close",
+                "sell_to_open",
+                "sell_to_close",
+            ]:
+                raise ValueError(
+                    f"Invalid side for leg at index {index}. Must be one of ['buy_to_open', 'buy_to_close', 'sell_to_open', 'sell_to_close']"
+                )
+
+            if not isinstance(leg.quantity, int) or leg.quantity <= 0:
+                raise ValueError(
+                    f"Invalid quantity for leg at index {index}. Must be a positive integer."
+                )
+
+            data[f"option_symbol[{index}]"] = leg.option_symbol.upper() if leg.option_symbol else None
+            data[f"symbol[{index}]"] = leg.stock_symbol.upper() if leg.stock_symbol else None
+            data[f"side[{index}]"] = leg.side.lower() if leg.side else None
+            data[f"quantity[{index}]"] = int(leg.quantity) if leg.quantity else None
+            data[f"price[{index}]"] = leg.price if leg.price else None
+            data[f"stop[{index}]"] = leg.stop if leg.stop else None
+            data[f"type[{index}]"] = leg.type if leg.type else None
 
         # Send the request to the Tradier API
         response = self.send(self.ORDER_ENDPOINT, data)
