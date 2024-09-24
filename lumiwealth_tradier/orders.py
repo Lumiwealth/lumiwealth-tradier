@@ -322,9 +322,9 @@ class Orders(TradierApiBase):
                     f"Invalid side for leg at index {index}. Must be one of ['buy_to_open', 'buy_to_close', 'sell_to_open', 'sell_to_close']"
                 )
 
-            if not isinstance(leg.quantity, int) or leg.quantity <= 0:
+            if not (isinstance(leg.quantity, (int, float))) or leg.quantity <= 0:
                 raise ValueError(
-                    f"Invalid quantity for leg at index {index}. Must be a positive integer."
+                    f"Invalid quantity for leg at index {index}. Must be a positive number. Got {leg.quantity}"
                 )
 
             data[f"option_symbol[{index}]"] = leg.option_symbol.upper()
