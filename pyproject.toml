@@ -7,7 +7,7 @@
 line-length = 120
 
 # Assume Python 3.8+ for type annotations
-target-version = "py38"
+target-version = "py311"
 
 select = [
   "A",  # prevent using keywords that clobber python builtins
