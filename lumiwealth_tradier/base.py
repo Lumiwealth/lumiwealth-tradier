@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 from typing import Union
 
 import requests
@@ -90,7 +91,12 @@ class TradierApiBase:
         if r.status_code != 200 and r.status_code != 201 and r.status_code != 502:
             raise TradierApiError(f"Error: {r.status_code} - {r.text}")
 
-        ret_data = r.json()
+        # Parse the response from the Tradier API.  Sometimes no valid json is returned.
+        try:
+            ret_data = r.json()
+        except json.decoder.JSONDecodeError:
+            ret_data = {}
+
         if ret_data and "errors" in ret_data and "error" in ret_data["errors"]:
             if isinstance(ret_data["errors"]["error"], list):
                 msg = " | ".join(ret_data["errors"]["error"])
@@ -98,7 +104,7 @@ class TradierApiBase:
                 msg = ret_data["errors"]["error"]
             raise TradierApiError(f"Error: {msg}")
 
-        return r.json()
+        return ret_data
 
     def send(self, endpoint, data, headers=None) -> dict:
         """
