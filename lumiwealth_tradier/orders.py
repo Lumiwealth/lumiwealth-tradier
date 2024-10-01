@@ -201,10 +201,15 @@ class Orders(TradierApiBase):
         ]
         if side.lower() not in valid_sides:
             raise ValueError(f"Invalid side. Must be one of {valid_sides}")
+        
+        symbol_clean = symbol.upper()
+        # If the symbol contains a "." (eg. "BRK.B"), we need to remove it
+        if "." in symbol_clean:
+            symbol_clean = symbol_clean.replace(".", "/")
 
         payload = {
             "class": order_class,
-            "symbol": symbol.upper(),
+            "symbol": symbol_clean,
             "option_symbol": option_symbol.upper(),
             "side": side.lower(),
             "quantity": int(quantity),

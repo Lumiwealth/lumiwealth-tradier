@@ -48,6 +48,9 @@ class MarketData(TradierApiBase):
         :param greeks: Include greeks in response. Only Valid for Options.
         :return: DataFrame of quotes.  See Tradier weblink for column definitions.
         """
+        # If any of the symbols contain ".", like "BRK.B", replace with "/"
+        symbols = [s.replace(".", "/") for s in symbols] if isinstance(symbols, list) else symbols.replace(".", "/")
+
         # Create payload
         symbols = symbols if isinstance(symbols, str) else ",".join(symbols)
         payload = {"symbols": symbols, greeks: greeks}
@@ -62,6 +65,9 @@ class MarketData(TradierApiBase):
         quotes = response["quotes"]["quote"]
         quotes = quotes if isinstance(quotes, list) else [quotes]
         df = pd.json_normalize(quotes)
+
+        # Clean up names and add back the "." in the symbol
+        df["symbol"] = df["symbol"].str.replace("/", ".")
 
         return df.set_index("symbol")
 

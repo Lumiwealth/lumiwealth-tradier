@@ -178,3 +178,48 @@ class TestOrders:
 
         # Check it returned a partner_id
         assert 'partner_id' in multileg_order.keys()
+
+    def test_buying_brk_stock(self, tradier):
+        # Submit basic order
+        basic_order = tradier.orders.order(symbol='BRK.B', quantity=1, side='buy', order_type='market', tag='unittest')
+        assert isinstance(basic_order, dict)
+        assert 'id' in basic_order.keys()
+        assert 'status' in basic_order.keys()
+        assert basic_order['id'] > 0
+
+        # Retrieve order status
+        order_status = tradier.orders.get_order(basic_order['id'])
+        assert 'id' in order_status.columns
+        assert order_status['id'].iloc[0] == basic_order['id']
+
+        # Cancel the testing order once we are done
+        resp = tradier.orders.cancel(basic_order['id'])
+        assert resp
+        assert resp['id'] == basic_order['id']
+
+    def test_buying_spx_index_option(self, tradier):
+        # Lookup Expiration Date, Strike, and Option Symbol
+        df_expr = tradier.market.get_option_expirations('SPX')
+        assert df_expr is not None
+        expr_date = df_expr.index[1]
+        # Pick a strike from the middle of the list
+        strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
+        strike = df_expr.iloc[0]['strikes'][strk_idx]
+        chains_df = tradier.market.get_option_chains('SPX', expr_date)
+        assert chains_df is not None
+        option_symbol = chains_df[
+            (chains_df['strike'] == strike) & (chains_df['option_type'] == 'call')
+        ].iloc[0]['symbol']
+
+        # Place the order
+        option_order = tradier.orders.order_option(asset_symbol="SPX", option_symbol=option_symbol, quantity=1,
+                                                   side='buy_to_open', order_type='market', tag='unittest')
+        assert isinstance(option_order, dict)
+        assert 'id' in option_order.keys()
+        assert 'status' in option_order.keys()
+        assert option_order['id'] > 0
+
+        # Cancel the testing order once we are done
+        resp = tradier.orders.cancel(option_order['id'])
+        assert resp
+        assert resp['id'] == option_order['id']
