@@ -196,3 +196,9 @@ class TestMarket:
         assert trading_day > today - dt.timedelta(days=7)
 
         assert tradier.market.get_previous_trading_day(today) == trading_day
+
+    def test_quote_for_brk(self, tradier):
+        df = tradier.market.get_quotes(['BRK.B'])
+        assert df is not None
+        assert 'last' in df.columns
+        assert df.loc['BRK.B']['last'] > 0
