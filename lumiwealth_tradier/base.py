@@ -1,5 +1,7 @@
 import datetime as dt
 import json
+import warnings
+from time import sleep
 from typing import Union
 
 import requests
@@ -58,7 +60,7 @@ class TradierApiBase:
         """
         return self.request(endpoint, params=params, headers=headers, data=data, method="delete")
 
-    def request(self, endpoint, params=None, headers=None, data=None, method="get") -> dict:
+    def request(self, endpoint, params=None, headers=None, data=None, method="get", max_retries=3) -> dict:
         """
         This function makes a request to the Tradier API and returns a json object.
         :param endpoint: Tradier API endpoint
@@ -66,10 +68,9 @@ class TradierApiBase:
         :param headers: Dictionary of requests.get() headers to pass to the endpoint
         :param data: Dictionary of requests.post() data to pass to the endpoint
         :param method: 'get', 'post' or 'delete'
+        :param max_retries: number of times to retry the request if it fails
         :return: json object
         """
-        if not headers:
-            headers = self.REQUESTS_HEADERS
 
         if not params:
             params = {}
@@ -77,14 +78,34 @@ class TradierApiBase:
         if not data:
             data = {}
 
-        if method == "get":
-            r = requests.get(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers)
-        elif method == "post":
-            r = requests.post(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
-        elif method == "delete":
-            r = requests.delete(url=f"{self.base_url()}/{endpoint}", params=params, data=data, headers=headers)
-        else:
+        if method not in ["get", "post", "delete"]:
             raise ValueError(f"Invalid method {method}. Must be one of ['get', 'post', 'delete']")
+
+        attempt = 0
+        successful = False
+        while (attempt < max_retries) and not successful:
+            attempt += 1
+            try:
+                if method == "get":
+                    r = requests.get(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers)
+                elif method == "post":
+                    r = requests.post(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
+                elif method == "delete":
+                    r = requests.delete(url=f"{self.base_url()}/{endpoint}", params=params, data=data, headers=headers)
+
+                if r.status_code >= 200 and r.status_code < 300:
+                    successful = True
+            except requests.exceptions.RequestException as e:
+                warnings.warn(f"{method} request failed. Error: {e}")
+            if not successful:
+                if attempt < max_retries:
+                    # exponentially increase delay between attempts
+                    backoff_seconds = 1.5 * (2 ** (attempt))
+                    warnings.warn(f"Retrying {method} request in {backoff_seconds} seconds.")
+                    sleep(backoff_seconds)
+                else:
+                    raise TradierApiError(f"Error: {method} request failed after {max_retries} attempts.")
+
 
         # Check for errors in response from Tradier API. 
         # 502 is a common error code when the API is down for a few seconds so we ignore it too.
