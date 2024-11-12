@@ -1,12 +1,27 @@
 import datetime as dt
 import json
-from typing import Union
+from typing import Union, List
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 # Define base url for live/paper trading and individual API endpoints
 TRADIER_LIVE_URL = "https://api.tradier.com"
 TRADIER_SANDBOX_URL = "https://sandbox.tradier.com"
+
+DEFAULT_RETRY_ATTEMPTS = 3
+DEFAULT_RETRY_BACKOFF_FACTOR = 3.06
+DEFAULT_RETRY_WAIT_SECONDS = 3
+DEFAULT_CONNECTION_TIMEOUT = 10
+DEFAULT_RETRY_HTTP_STATUS_CODES: List[int] = [409, 429, 500, 502, 503, 504, 520, 530]
+# Don't retry these as they are not transient errors:
+# 401 - Unauthorized
+
+# https://urllib3.readthedocs.io/en/latest/reference/urllib3.util.html#urllib3.util.retry.Retry
+DEFAULT_ALLOWED_METHODS = frozenset(['GET'])
+# Retry all methods
+# DEFAULT_ALLOWED_METHODS = None
 
 
 class TradierApiError(Exception):
@@ -25,6 +40,9 @@ class TradierApiBase:
             "Accept": "application/json",  # Default all interactions with Tradier API to return json
         }
 
+        # Create a session object for retrying requests
+        self._session = requests.Session()
+
     def base_url(self):
         """
         This function returns the base url for the Tradier API.
@@ -37,7 +55,7 @@ class TradierApiBase:
     @staticmethod
     def date2str(date: Union[str, dt.datetime, dt.date], include_min=False) -> str:
         """
-        This function converts a datetime.date object to a string in the format of YYYY-MM-DD.
+        This function converts a date object to a string in the format of YYYY-MM-DD.
         :param date: datetime.date object
         :param include_min: Include minutes in the string. Default is False.
         :return: String in the format of YYYY-MM-DD or YYYY-MM-DD HH:MM
@@ -78,7 +96,8 @@ class TradierApiBase:
             data = {}
 
         if method == "get":
-            r = requests.get(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers)
+            # Use a retry session to handle transient errors and retry the request
+            r = self.requests_retry_session().get(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers)
         elif method == "post":
             r = requests.post(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
         elif method == "delete":
@@ -115,3 +134,29 @@ class TradierApiBase:
         :return: json object
         """
         return self.request(endpoint, params={}, headers=headers, data=data, method="post")
+
+    def requests_retry_session(
+            self,
+            retries=DEFAULT_RETRY_ATTEMPTS,
+            backoff_factor=DEFAULT_RETRY_BACKOFF_FACTOR,
+            status_forcelist=None,
+            allowed_methods=DEFAULT_ALLOWED_METHODS,
+            session=None,
+    ):
+        if status_forcelist is None:
+            status_forcelist = DEFAULT_RETRY_HTTP_STATUS_CODES
+            
+        session = session or self._session
+        retry = Retry(
+            total=retries,
+            read=retries,
+            connect=retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=status_forcelist,
+            allowed_methods=allowed_methods,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        return session
+    
