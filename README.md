@@ -146,6 +146,25 @@ To contribute or make changes to the `lumiwealth-tradier` package, feel free to 
   
   `venv\Scripts\activate` [Windows]
 
+- Install the required dev dependencies:
+
+  `pip install -r requirements_dev.txt`
+
+- Install the package in editable mode:
+
+  `pip install -e .`
+
+- Create a `.env` file in the root directory and add your Tradier account number and access token.
+
+- Add the following vars for testing:
+
+    `TRADIER_ACCOUNT_NUMBER=<YOUR_ACCOUNT_NUMBER_FROM_TRADIER_DASHBOARD>`
+    `TRADIER_PAPER_TOKEN=<YOUR_PAPER_ACCESS_TOKEN_FROM_TRADIER_DASHBOARD>`
+
+- Finally, run the tests:
+
+  `pytest`
+
 ## Questions?
 
 Happy to help! Feel free to contact Robert Grzesik by email at <EMAIL?>. <br>
