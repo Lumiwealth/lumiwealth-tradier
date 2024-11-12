@@ -1,9 +1,10 @@
 import datetime as dt
 from typing import Union
+from time import sleep
 
 import pandas as pd
 
-from .base import TradierApiBase
+from .base import TradierApiBase, DEFAULT_RETRY_ATTEMPTS
 
 
 class MarketData(TradierApiBase):
@@ -122,8 +123,14 @@ class MarketData(TradierApiBase):
         if end_date:
             payload["end"] = self.date2str(end_date)
 
-        # Get response
-        response = self.request(self.HISTORICAL_QUOTES_ENDPOINT, payload)
+        # Get response, but retry if we don't get any data.
+        # Sometimes tradier responds but with no data, so the requests_retry_session doesn't retry.
+        for _ in range(DEFAULT_RETRY_ATTEMPTS):
+            response = self.request(self.HISTORICAL_QUOTES_ENDPOINT, payload)
+            if response["history"] and "day" in response["history"]:
+                break
+            else:
+                sleep(1)
 
         if response["history"] is None or "day" not in response["history"]:
             raise LookupError(
