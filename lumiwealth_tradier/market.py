@@ -1,10 +1,13 @@
 import datetime as dt
 from typing import Union
 from time import sleep
+import logging
 
 import pandas as pd
 
 from .base import TradierApiBase, DEFAULT_RETRY_ATTEMPTS
+
+logger = logging.getLogger(__name__)
 
 
 class MarketData(TradierApiBase):
@@ -130,6 +133,7 @@ class MarketData(TradierApiBase):
             if response["history"] and "day" in response["history"]:
                 break
             else:
+                logger.info(f"No data for {symbol} from get_historical_quotes. Retrying.")
                 sleep(1)
 
         if response["history"] is None or "day" not in response["history"]:
