@@ -59,8 +59,16 @@ class MarketData(TradierApiBase):
         symbols = symbols if isinstance(symbols, str) else ",".join(symbols)
         payload = {"symbols": symbols, greeks: greeks}
 
-        # Get response
-        response = self.request(self.QUOTES_ENDPOINT, payload)
+        # Get response, but retry if we don't get any data.
+        # Sometimes tradier responds but with no data, so the requests_retry_session doesn't retry.
+        response = None
+        for _ in range(DEFAULT_RETRY_ATTEMPTS):
+            response = self.request(self.QUOTES_ENDPOINT, payload)
+            if response["quotes"] and "quote" in response["quotes"]:
+                break
+            else:
+                logger.info(f"No data for {symbols} from get_quotes. Retrying.")
+                sleep(1)
 
         if "quote" not in response["quotes"]:
             raise ValueError(f"Invalid symbol: {payload['symbols']}")
@@ -128,6 +136,7 @@ class MarketData(TradierApiBase):
 
         # Get response, but retry if we don't get any data.
         # Sometimes tradier responds but with no data, so the requests_retry_session doesn't retry.
+        response = None
         for _ in range(DEFAULT_RETRY_ATTEMPTS):
             response = self.request(self.HISTORICAL_QUOTES_ENDPOINT, payload)
             if response["history"] and "day" in response["history"]:
@@ -191,7 +200,17 @@ class MarketData(TradierApiBase):
         if end_date:
             payload["end"] = self.date2str(end_date, include_min=True)
 
-        response = self.request(self.TIME_AND_SALES_ENDPOINT, payload)
+        # Get response, but retry if we don't get any data.
+        # Sometimes tradier responds but with no data, so the requests_retry_session doesn't retry.
+        response = None
+        for _ in range(DEFAULT_RETRY_ATTEMPTS):
+            response = self.request(self.TIME_AND_SALES_ENDPOINT, payload)
+            if response["series"] and "data" in response["series"]:
+                break
+            else:
+                logger.info(f"No data for {symbol} from get_timesales. Retrying.")
+                sleep(1)
+
         if response["series"] is None or "data" not in response["series"]:
             raise LookupError(
                 f"No Time and Sales found for: Symbol={payload['symbol']}, start={payload['start']}, "
@@ -239,8 +258,16 @@ class MarketData(TradierApiBase):
             "includeAllRoots": include_all_roots,
         }
 
-        # Get response
-        response = self.request(self.OPTION_EXPIRATIONS_ENDPOINT, payload)
+        # Get response, but retry if we don't get any data.
+        # Sometimes tradier responds but with no data, so the requests_retry_session doesn't retry.
+        response = None
+        for _ in range(DEFAULT_RETRY_ATTEMPTS):
+            response = self.request(self.OPTION_EXPIRATIONS_ENDPOINT, payload)
+            if response["expirations"] and "expiration" in response["expirations"]:
+                break
+            else:
+                logger.info(f"No data for {symbol} from get_option_expiration. Retrying.")
+                sleep(1)
 
         if not response["expirations"] or "expiration" not in response["expirations"]:
             raise LookupError(f"No Option Expirations found for: Symbol={payload['symbol']}")
@@ -274,8 +301,16 @@ class MarketData(TradierApiBase):
             "greeks": greeks,
         }
 
-        # Get response
-        response = self.request(self.OPTION_CHAIN_ENDPOINT, payload)
+        # Get response, but retry if we don't get any data.
+        # Sometimes tradier responds but with no data, so the requests_retry_session doesn't retry.
+        response = None
+        for _ in range(DEFAULT_RETRY_ATTEMPTS):
+            response = self.request(self.OPTION_CHAIN_ENDPOINT, payload)
+            if response["options"] and "option" in response["options"]:
+                break
+            else:
+                logger.info(f"No data for {symbol} from get_option_chains. Retrying.")
+                sleep(1)
 
         if not response["options"] or "option" not in response["options"]:
             raise LookupError(
@@ -305,8 +340,16 @@ class MarketData(TradierApiBase):
             "expiration": self.date2str(expiration),
         }
 
-        # Get response
-        response = self.request(self.OPTION_STRIKES_ENDPOINT, payload)
+        # Get response, but retry if we don't get any data.
+        # Sometimes tradier responds but with no data, so the requests_retry_session doesn't retry.
+        response = None
+        for _ in range(DEFAULT_RETRY_ATTEMPTS):
+            response = self.request(self.OPTION_STRIKES_ENDPOINT, payload)
+            if response["strikes"] and "strike" in response["strikes"]:
+                break
+            else:
+                logger.info(f"No data for {symbol} from get_option_strikes. Retrying.")
+                sleep(1)
 
         if not response["strikes"] or "strike" not in response["strikes"]:
             raise LookupError(
@@ -376,8 +419,16 @@ class MarketData(TradierApiBase):
             "year": str(year),
         }
 
-        # Get response
-        response = self.request(self.CALENDAR_ENDPOINT, payload)
+        # Get response, but retry if we don't get any data.
+        # Sometimes tradier responds but with no data, so the requests_retry_session doesn't retry.
+        response = None
+        for _ in range(DEFAULT_RETRY_ATTEMPTS):
+            response = self.request(self.CALENDAR_ENDPOINT, payload)
+            if response["calendar"] and "days" in response["calendar"]:
+                break
+            else:
+                logger.info(f"No data from get_calendar. Retrying.")
+                sleep(1)
 
         if not response["calendar"] or "days" not in response["calendar"]:
             raise LookupError(f"No Calendar found for: Month={payload['month']}, Year={payload['year']}")
@@ -419,8 +470,16 @@ class MarketData(TradierApiBase):
         if types:
             payload["types"] = types if isinstance(types, str) else ",".join(types)
 
-        # Get response
-        response = self.request(self.LOOKUP_SYMBOL_ENDPOINT, payload)
+        # Get response, but retry if we don't get any data.
+        # Sometimes tradier responds but with no data, so the requests_retry_session doesn't retry.
+        response = None
+        for _ in range(DEFAULT_RETRY_ATTEMPTS):
+            response = self.request(self.LOOKUP_SYMBOL_ENDPOINT, payload)
+            if response["securities"] and "security" in response["securities"]:
+                break
+            else:
+                logger.info(f"No data for {query} from lookup_symbol. Retrying.")
+                sleep(1)
 
         if not response["securities"] or "security" not in response["securities"]:
             raise LookupError(

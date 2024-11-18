@@ -14,6 +14,7 @@ def tradier():
 
 
 class TestOrders:
+
     def test_bad_order_inputs(self, tradier):
         with pytest.raises(ValueError):
             tradier.orders.order(symbol='AAPL', quantity=1, side='bad_side', order_type='market', tag='unittest')
@@ -223,3 +224,4 @@ class TestOrders:
         resp = tradier.orders.cancel(option_order['id'])
         assert resp
         assert resp['id'] == option_order['id']
+        
