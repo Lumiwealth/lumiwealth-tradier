@@ -134,6 +134,11 @@ class TestOrders:
         # Check it returned a partner_id
         assert 'partner_id' in multileg_order
 
+        # Cancel the testing order once we are done
+        resp = tradier.orders.cancel(multileg_order['id'])
+        assert resp
+        assert resp['id'] == multileg_order['id']
+
     # Test options order multileg with credit price
     def test_option_order_multileg_credit(self, tradier):
         from lumiwealth_tradier.orders import OrderLeg
@@ -180,6 +185,11 @@ class TestOrders:
         # Check it returned a partner_id
         assert 'partner_id' in multileg_order.keys()
 
+        # Cancel the testing order once we are done
+        resp = tradier.orders.cancel(multileg_order['id'])
+        assert resp
+        assert resp['id'] == multileg_order['id']
+
     def test_buying_brk_stock(self, tradier):
         # Submit basic order
         basic_order = tradier.orders.order(symbol='BRK.B', quantity=1, side='buy', order_type='market', tag='unittest')
@@ -224,4 +234,3 @@ class TestOrders:
         resp = tradier.orders.cancel(option_order['id'])
         assert resp
         assert resp['id'] == option_order['id']
-        
