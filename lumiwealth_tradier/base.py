@@ -1,6 +1,8 @@
 import datetime as dt
 import json
 from typing import Union, List
+import logging
+from time import sleep
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -22,6 +24,8 @@ DEFAULT_RETRY_HTTP_STATUS_CODES: List[int] = [409, 429, 500, 502, 503, 504, 520,
 DEFAULT_ALLOWED_METHODS = frozenset(['GET'])
 # Retry all methods
 # DEFAULT_ALLOWED_METHODS = None
+
+logger = logging.getLogger(__name__)
 
 
 class TradierApiError(Exception):
@@ -76,7 +80,15 @@ class TradierApiBase:
         """
         return self.request(endpoint, params=params, headers=headers, data=data, method="delete")
 
-    def request(self, endpoint, params=None, headers=None, data=None, method="get") -> dict:
+    def request(
+            self,
+            endpoint,
+            params=None,
+            headers=None,
+            data=None,
+            required_response_key=None,
+            method="get"
+    ) -> dict:
         """
         This function makes a request to the Tradier API and returns a json object.
         :param endpoint: Tradier API endpoint
@@ -84,6 +96,7 @@ class TradierApiBase:
         :param headers: Dictionary of requests.get() headers to pass to the endpoint
         :param data: Dictionary of requests.post() data to pass to the endpoint
         :param method: 'get', 'post' or 'delete'
+        :param required_response_key: Key that must be in the data response else it retries the request
         :return: json object
         """
         if not headers:
@@ -95,9 +108,26 @@ class TradierApiBase:
         if not data:
             data = {}
 
+        r = None
         if method == "get":
-            # Use a retry session to handle transient errors and retry the request
-            r = self.requests_retry_session().get(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers)
+            # We want to retry GET requests if the response is empty or if the request fails.
+            # We don't want to retry other methods because they may have side effects (like submitting
+            # extra orders).
+            # We use simple a for loop to catch cases when the request succeeds but there was no data.
+            r = None
+            for _ in range(DEFAULT_RETRY_ATTEMPTS):
+                # We use a retry session to handle transient errors and retry the request.
+                r = self.requests_retry_session().get(
+                    url=f"{self.base_url()}/{endpoint}",
+                    params=params,
+                    headers=headers
+                )
+                if required_response_key:
+                    if required_response_key in r and r[required_response_key] is not None:
+                        break
+                else:
+                    logger.info(f"No response from {endpoint} did not contain {required_response_key}. Retrying.")
+                    sleep(1)
         elif method == "post":
             r = requests.post(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
         elif method == "delete":

@@ -202,9 +202,3 @@ class TestMarket:
         assert df is not None
         assert 'last' in df.columns
         assert df.loc['BRK.B']['last'] > 0
-
-    # def test_historical_quote_for_SPX250117C05480000(self, tradier):
-    #     df = tradier.market.get_historical_quotes('SPX250117C05480000', start_date='2024-11-17', end_date='2024-11-18')
-    #     assert df is not None
-    #     assert 'open' in df.columns
-    #     assert df.iloc[0]['open'] > 0
