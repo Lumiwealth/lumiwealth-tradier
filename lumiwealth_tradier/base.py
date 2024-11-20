@@ -108,43 +108,43 @@ class TradierApiBase:
         if not data:
             data = {}
 
-        r = None
-        if method == "get":
-            # We want to retry GET requests if the response is empty or if the request fails.
-            # We don't want to retry other methods because they may have side effects (like submitting
-            # extra orders).
-            # We use simple a for loop to catch cases when the request succeeds but there was no data.
+        # We want to retry GET requests if the response is empty or if the request fails.
+        # We don't want to retry other methods because they may have side effects (like submitting
+        # extra orders).
+        # We use simple a for loop to catch cases when the request succeeds but there was no data.
+        retry_attempts = DEFAULT_RETRY_ATTEMPTS if method == "get" else 1
+        for retry_attempt in range(retry_attempts):
             r = None
-            for _ in range(DEFAULT_RETRY_ATTEMPTS):
+            if method == "get":
                 # We use a retry session to handle transient errors and retry the request.
-                r = self.requests_retry_session().get(
-                    url=f"{self.base_url()}/{endpoint}",
-                    params=params,
-                    headers=headers
-                )
-                if required_response_key:
-                    if required_response_key in r and r[required_response_key] is not None:
-                        break
+                r = self.requests_retry_session().get(url=f"{self.base_url()}/{endpoint}",params=params,headers=headers)
+            elif method == "post":
+                r = requests.post(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
+            elif method == "delete":
+                r = requests.delete(url=f"{self.base_url()}/{endpoint}", params=params, data=data, headers=headers)
+            else:
+                raise ValueError(f"Invalid method {method}. Must be one of ['get', 'post', 'delete']")
+
+            # Check for errors in response from Tradier API.
+            # 502 is a common error code when the API is down for a few seconds so we ignore it too.
+            if r.status_code != 200 and r.status_code != 201 and r.status_code != 502:
+                raise TradierApiError(f"Error: {r.status_code} - {r.text}")
+
+            # Parse the response from the Tradier API.  Sometimes no valid json is returned.
+            try:
+                ret_data = r.json()
+            except json.decoder.JSONDecodeError:
+                ret_data = {}
+
+            if required_response_key:
+                if required_response_key in ret_data and ret_data[required_response_key] is not None:
+                    break
                 else:
-                    logger.info(f"No response from {endpoint} did not contain {required_response_key}. Retrying.")
-                    sleep(1)
-        elif method == "post":
-            r = requests.post(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
-        elif method == "delete":
-            r = requests.delete(url=f"{self.base_url()}/{endpoint}", params=params, data=data, headers=headers)
-        else:
-            raise ValueError(f"Invalid method {method}. Must be one of ['get', 'post', 'delete']")
-
-        # Check for errors in response from Tradier API. 
-        # 502 is a common error code when the API is down for a few seconds so we ignore it too.
-        if r.status_code != 200 and r.status_code != 201 and r.status_code != 502:
-            raise TradierApiError(f"Error: {r.status_code} - {r.text}")
-
-        # Parse the response from the Tradier API.  Sometimes no valid json is returned.
-        try:
-            ret_data = r.json()
-        except json.decoder.JSONDecodeError:
-            ret_data = {}
+                    if retry_attempt == retry_attempts - 1:
+                        logger.info(f"Response from {endpoint} did not contain {required_response_key}.")
+                    else:
+                        logger.info(f"Response from {endpoint} did not contain {required_response_key}. Retrying...")
+                        sleep(1)
 
         if ret_data and "errors" in ret_data and "error" in ret_data["errors"]:
             if isinstance(ret_data["errors"]["error"], list):
