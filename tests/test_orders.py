@@ -69,7 +69,7 @@ class TestOrders:
         expr_date = df_expr.index[1]
         # Pick a strike from the middle of the list
         strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
-        strike = df_expr.iloc[0]['strikes'][strk_idx]
+        strike = df_expr.iloc[1]['strikes'][strk_idx]
         chains_df = tradier.market.get_option_chains('SPY', expr_date)
         assert chains_df is not None
         option_symbol = chains_df[
@@ -98,8 +98,8 @@ class TestOrders:
         expr_date = df_expr.index[1]
 
         # Pick a strike from the middle of the list
-        strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
-        strike = df_expr.iloc[0]['strikes'][strk_idx]
+        strk_idx = int(len(df_expr.iloc[1]['strikes']) / 2)
+        strike = df_expr.iloc[1]['strikes'][strk_idx]
         chains_df = tradier.market.get_option_chains('SPY', expr_date)
         assert chains_df is not None
 
@@ -149,8 +149,8 @@ class TestOrders:
         expr_date = df_expr.index[1]
 
         # Pick a strike from the middle of the list
-        strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
-        strike = df_expr.iloc[0]['strikes'][strk_idx]
+        strk_idx = int(len(df_expr.iloc[1]['strikes']) / 2)
+        strike = df_expr.iloc[1]['strikes'][strk_idx]
         chains_df = tradier.market.get_option_chains('SPY', expr_date)
         assert chains_df is not None
 
