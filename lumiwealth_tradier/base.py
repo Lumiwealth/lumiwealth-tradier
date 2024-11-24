@@ -117,7 +117,12 @@ class TradierApiBase:
             r = None
             if method == "get":
                 # We use a retry session to handle transient errors and retry the request.
-                r = self.requests_retry_session().get(url=f"{self.base_url()}/{endpoint}",params=params,headers=headers)
+                r = self.requests_retry_session().get(
+                    url=f"{self.base_url()}/{endpoint}",
+                    params=params,
+                    headers=headers,
+                    timeout=DEFAULT_CONNECTION_TIMEOUT,
+                )
             elif method == "post":
                 r = requests.post(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
             elif method == "delete":
@@ -133,7 +138,8 @@ class TradierApiBase:
             # Parse the response from the Tradier API.  Sometimes no valid json is returned.
             try:
                 ret_data = r.json()
-            except json.decoder.JSONDecodeError:
+            except json.decoder.JSONDecodeError as  e:
+                logger.warning(f"Failed to decode JSON response: {e}")
                 ret_data = {}
 
             if required_response_key:
@@ -141,10 +147,10 @@ class TradierApiBase:
                     break
                 else:
                     if retry_attempt == retry_attempts - 1:
-                        logger.info(f"Response from {endpoint} did not contain {required_response_key}.")
+                        logger.error(f"Response from {endpoint} did not contain {required_response_key}.")
                     else:
                         logger.info(f"Response from {endpoint} did not contain {required_response_key}. Retrying...")
-                        sleep(1)
+                        sleep(DEFAULT_RETRY_WAIT_SECONDS)
 
         if ret_data and "errors" in ret_data and "error" in ret_data["errors"]:
             if isinstance(ret_data["errors"]["error"], list):
