@@ -14,6 +14,7 @@ def tradier():
 
 
 class TestOrders:
+
     def test_bad_order_inputs(self, tradier):
         with pytest.raises(ValueError):
             tradier.orders.order(symbol='AAPL', quantity=1, side='bad_side', order_type='market', tag='unittest')
@@ -68,7 +69,7 @@ class TestOrders:
         expr_date = df_expr.index[1]
         # Pick a strike from the middle of the list
         strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
-        strike = df_expr.iloc[0]['strikes'][strk_idx]
+        strike = df_expr.iloc[1]['strikes'][strk_idx]
         chains_df = tradier.market.get_option_chains('SPY', expr_date)
         assert chains_df is not None
         option_symbol = chains_df[
@@ -97,8 +98,8 @@ class TestOrders:
         expr_date = df_expr.index[1]
 
         # Pick a strike from the middle of the list
-        strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
-        strike = df_expr.iloc[0]['strikes'][strk_idx]
+        strk_idx = int(len(df_expr.iloc[1]['strikes']) / 2)
+        strike = df_expr.iloc[1]['strikes'][strk_idx]
         chains_df = tradier.market.get_option_chains('SPY', expr_date)
         assert chains_df is not None
 
@@ -133,6 +134,11 @@ class TestOrders:
         # Check it returned a partner_id
         assert 'partner_id' in multileg_order
 
+        # Cancel the testing order once we are done
+        resp = tradier.orders.cancel(multileg_order['id'])
+        assert resp
+        assert resp['id'] == multileg_order['id']
+
     # Test options order multileg with credit price
     def test_option_order_multileg_credit(self, tradier):
         from lumiwealth_tradier.orders import OrderLeg
@@ -143,8 +149,8 @@ class TestOrders:
         expr_date = df_expr.index[1]
 
         # Pick a strike from the middle of the list
-        strk_idx = int(len(df_expr.iloc[0]['strikes']) / 2)
-        strike = df_expr.iloc[0]['strikes'][strk_idx]
+        strk_idx = int(len(df_expr.iloc[1]['strikes']) / 2)
+        strike = df_expr.iloc[1]['strikes'][strk_idx]
         chains_df = tradier.market.get_option_chains('SPY', expr_date)
         assert chains_df is not None
 
@@ -178,6 +184,11 @@ class TestOrders:
 
         # Check it returned a partner_id
         assert 'partner_id' in multileg_order.keys()
+
+        # Cancel the testing order once we are done
+        resp = tradier.orders.cancel(multileg_order['id'])
+        assert resp
+        assert resp['id'] == multileg_order['id']
 
     def test_buying_brk_stock(self, tradier):
         # Submit basic order

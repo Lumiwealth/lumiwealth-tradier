@@ -1,9 +1,12 @@
 import datetime as dt
 from typing import Union
+import logging
 
 import pandas as pd
 
-from .base import TradierApiBase
+from .base import TradierApiBase, DEFAULT_RETRY_ATTEMPTS
+
+logger = logging.getLogger(__name__)
 
 
 class MarketData(TradierApiBase):
@@ -55,8 +58,7 @@ class MarketData(TradierApiBase):
         symbols = symbols if isinstance(symbols, str) else ",".join(symbols)
         payload = {"symbols": symbols, greeks: greeks}
 
-        # Get response
-        response = self.request(self.QUOTES_ENDPOINT, payload)
+        response = self.request(self.QUOTES_ENDPOINT, payload, required_response_key="quotes")
 
         if "quote" not in response["quotes"]:
             raise ValueError(f"Invalid symbol: {payload['symbols']}")
@@ -122,8 +124,7 @@ class MarketData(TradierApiBase):
         if end_date:
             payload["end"] = self.date2str(end_date)
 
-        # Get response
-        response = self.request(self.HISTORICAL_QUOTES_ENDPOINT, payload)
+        response = self.request(self.HISTORICAL_QUOTES_ENDPOINT, payload, required_response_key="history")
 
         if response["history"] is None or "day" not in response["history"]:
             raise LookupError(
@@ -180,7 +181,8 @@ class MarketData(TradierApiBase):
         if end_date:
             payload["end"] = self.date2str(end_date, include_min=True)
 
-        response = self.request(self.TIME_AND_SALES_ENDPOINT, payload)
+        response = self.request(self.TIME_AND_SALES_ENDPOINT, payload, required_response_key="series")
+
         if response["series"] is None or "data" not in response["series"]:
             raise LookupError(
                 f"No Time and Sales found for: Symbol={payload['symbol']}, start={payload['start']}, "
@@ -228,8 +230,7 @@ class MarketData(TradierApiBase):
             "includeAllRoots": include_all_roots,
         }
 
-        # Get response
-        response = self.request(self.OPTION_EXPIRATIONS_ENDPOINT, payload)
+        response = self.request(self.OPTION_EXPIRATIONS_ENDPOINT, payload, required_response_key="expirations")
 
         if not response["expirations"] or "expiration" not in response["expirations"]:
             raise LookupError(f"No Option Expirations found for: Symbol={payload['symbol']}")
@@ -263,8 +264,7 @@ class MarketData(TradierApiBase):
             "greeks": greeks,
         }
 
-        # Get response
-        response = self.request(self.OPTION_CHAIN_ENDPOINT, payload)
+        response = self.request(self.OPTION_CHAIN_ENDPOINT, payload, required_response_key="options")
 
         if not response["options"] or "option" not in response["options"]:
             raise LookupError(
@@ -294,8 +294,7 @@ class MarketData(TradierApiBase):
             "expiration": self.date2str(expiration),
         }
 
-        # Get response
-        response = self.request(self.OPTION_STRIKES_ENDPOINT, payload)
+        response = self.request(self.OPTION_STRIKES_ENDPOINT, payload, required_response_key="strikes")
 
         if not response["strikes"] or "strike" not in response["strikes"]:
             raise LookupError(
@@ -365,8 +364,7 @@ class MarketData(TradierApiBase):
             "year": str(year),
         }
 
-        # Get response
-        response = self.request(self.CALENDAR_ENDPOINT, payload)
+        response = self.request(self.CALENDAR_ENDPOINT, payload, required_response_key="calendar")
 
         if not response["calendar"] or "days" not in response["calendar"]:
             raise LookupError(f"No Calendar found for: Month={payload['month']}, Year={payload['year']}")
@@ -408,8 +406,7 @@ class MarketData(TradierApiBase):
         if types:
             payload["types"] = types if isinstance(types, str) else ",".join(types)
 
-        # Get response
-        response = self.request(self.LOOKUP_SYMBOL_ENDPOINT, payload)
+        response = self.request(self.LOOKUP_SYMBOL_ENDPOINT, payload, required_response_key="securities")
 
         if not response["securities"] or "security" not in response["securities"]:
             raise LookupError(

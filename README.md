@@ -140,11 +140,41 @@ To contribute or make changes to the `lumiwealth-tradier` package, feel free to 
 
   `cd lumiwealth-tradier`
 
-- If you need to be careful about dependencies, create a new Python virtual environment: <br>
+- Add the original repository as a remote:
 
-  `python -m venv replace_this_with_desired_venv_name` [Mac] <br>
-  
-  `venv\Scripts\activate` [Windows]
+  `git remote add upstream https://github.com/Lumiwealth/lumiwealth-tradier`
+
+- Confirm the remote has been added:
+
+  `git remote -v`
+
+- Create a new branch for your feature:
+
+  `git checkout -b feature_branch_name`
+
+- If you need to be careful about dependencies, create a new Python virtual environment and activate it:
+
+  `python -m venv venv`
+  `venv\Scripts\activate`
+
+- Install the required dev dependencies:
+
+  `pip install -r requirements_dev.txt`
+
+- Install the package in editable mode:
+
+  `pip install -e .`
+
+- Create a `.env` file in the root directory and add your Tradier account number and access token.
+
+- Add the following vars for testing:
+
+    `TRADIER_ACCOUNT_NUMBER=<YOUR_ACCOUNT_NUMBER_FROM_TRADIER_DASHBOARD>`
+    `TRADIER_PAPER_TOKEN=<YOUR_PAPER_ACCESS_TOKEN_FROM_TRADIER_DASHBOARD>`
+
+- Finally, run the tests:
+
+  `pytest`
 
 ## Questions?
 
