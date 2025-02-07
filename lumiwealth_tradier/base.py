@@ -125,10 +125,12 @@ class TradierApiBase:
                 )
             elif method == "post":
                 r = requests.post(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
+            elif method == "put":
+                r = requests.put(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
             elif method == "delete":
                 r = requests.delete(url=f"{self.base_url()}/{endpoint}", params=params, data=data, headers=headers)
             else:
-                raise ValueError(f"Invalid method {method}. Must be one of ['get', 'post', 'delete']")
+                raise ValueError(f"Invalid method {method}. Must be one of ['get', 'post', 'put', 'delete']")
 
             # Check for errors in response from Tradier API.
             # 502 is a common error code when the API is down for a few seconds so we ignore it too.
@@ -161,7 +163,7 @@ class TradierApiBase:
 
         return ret_data
 
-    def send(self, endpoint, data, headers=None) -> dict:
+    def send(self, endpoint, data, headers=None, method="put") -> dict:
         """
         This function sends a post request to the Tradier API and returns a json object.
         :param endpoint: Tradier API endpoint
@@ -169,7 +171,9 @@ class TradierApiBase:
         :param headers: Dictionary of requests.post() headers to pass to the endpoint
         :return: json object
         """
-        return self.request(endpoint, params={}, headers=headers, data=data, method="post")
+        if method.lower() not in ["put", "post"]:
+            raise ValueError(f"Invalid method {method}. Must be one of ['put', 'post']")
+        return self.request(endpoint, params={}, headers=headers, data=data, method=method.lower())
 
     def requests_retry_session(
             self,
@@ -195,4 +199,3 @@ class TradierApiBase:
         session.mount('http://', adapter)
         session.mount('https://', adapter)
         return session
-    
