@@ -142,20 +142,19 @@ class Orders(TradierApiBase):
         :param stop_price: Stop price. Required for stop and stop_limit orders.
         :return: json object
         """
-        if duration.lower() not in self.valid_durations:
-            raise ValueError(f"Invalid duration. Must be one of {self.valid_durations}")
-
         payload = {
             "order_id": order_id,
         }
         if duration:
+            if duration.lower() not in self.valid_durations:
+                raise ValueError(f"Invalid duration. Must be one of {self.valid_durations}")
             payload["duration"] = duration.lower()
         if limit_price:
             payload["price"] = limit_price
         if stop_price:
             payload["stop"] = stop_price
 
-        response = self.send(f"{self.ORDER_ENDPOINT}/{order_id}", payload)
+        response = self.send(f"{self.ORDER_ENDPOINT}/{order_id}", payload, method="put")
         return response["order"]
 
     def order(
