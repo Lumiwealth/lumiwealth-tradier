@@ -163,7 +163,7 @@ class TradierApiBase:
 
         return ret_data
 
-    def send(self, endpoint, data, headers=None, method="put") -> dict:
+    def send(self, endpoint, data, headers=None, method="post") -> dict:
         """
         This function sends a post request to the Tradier API and returns a json object.
         :param endpoint: Tradier API endpoint

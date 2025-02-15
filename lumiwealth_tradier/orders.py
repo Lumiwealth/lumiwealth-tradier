@@ -267,7 +267,7 @@ class Orders(TradierApiBase):
         )
 
         # Send the request to the Tradier API
-        response = self.send(self.ORDER_ENDPOINT, payload)
+        response = self.send(self.ORDER_ENDPOINT, payload, method="post")
 
         # Return the response
         return response["order"]
