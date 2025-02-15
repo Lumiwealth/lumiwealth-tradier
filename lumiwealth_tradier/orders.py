@@ -179,6 +179,7 @@ class Orders(TradierApiBase):
         :param side: 'buy', 'sell', 'buy_to_cover', 'sell_short', "buy_to_open", "buy_to_close", "sell_to_open", "sell_to_close"
         :param quantity: Quantity of shares to buy or sell
         :param order_type: 'market', 'limit', 'stop', 'stop_limit'
+        :param option_symbol: OCC option symbol (e.g. 'SPY210416C00300000')
         :param duration: 'day', 'gtc', 'pre', 'post'
         :param limit_price: Limit price. Required for limit and stop_limit orders.
         :param stop_price: Stop price. Required for stop and stop_limit orders.
