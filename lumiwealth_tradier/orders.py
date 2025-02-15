@@ -1,10 +1,10 @@
-import logging
 import re
 from typing import Union
 
 import pandas as pd
 
-from .base import TradierApiBase, TradierApiError
+from .base import TradierApiBase, TradierApiError, logger
+
 
 class OrderLeg:
     def __init__(self, option_symbol: str = None, side: str = None, quantity: int = None, price: float = None, stock_symbol: str = None, stop: float = None, type: str = None):
@@ -187,7 +187,7 @@ class Orders(TradierApiBase):
         """
         self._check_order_inputs(duration, limit_price, order_type, stop_price, tag)
 
-        # Equite and Options have different valid sides
+        # Equity and Options have different valid sides
         valid_sides = [
             "buy",
             "sell",
@@ -200,7 +200,7 @@ class Orders(TradierApiBase):
         ]
         if side.lower() not in valid_sides:
             raise ValueError(f"Invalid side. Must be one of {valid_sides}")
-        
+
         symbol_clean = symbol.upper()
         # If the symbol contains a "." (eg. "BRK.B"), we need to remove it
         if "." in symbol_clean:
@@ -340,11 +340,21 @@ class Orders(TradierApiBase):
 
         # Return the response
         return response["order"]
-    
-    def oco_order(
+
+    def oco_order(self,
+                  duration: str,
+                  legs: list[OrderLeg],
+                  tag: str = "",
+                  ) -> dict:
+        """Put in for backwards compatibility"""
+        logger.warning("oco_order is deprecated. Use advanced_order with order_class='oco' instead.")
+        return self.advanced_order(duration, legs, "oco", tag)
+
+    def advanced_order(
         self,
         duration: str,
         legs: list[OrderLeg],
+        order_class: str,
         tag: str = "",
     ) -> dict:
         """
@@ -352,17 +362,32 @@ class Orders(TradierApiBase):
 
         :param duration: The duration of the order ('day', 'gtc', 'pre', 'post').
         :param legs: A list of OrderLeg objects, each representing one leg of the OCO order.
+        :param order_class: The class of the advanced order. Must be one of ['oco', 'oto', 'otoco'].
         :param tag: An optional tag for the order.
         :return: A dictionary representing the API's response.
         """
+        valid_sides = [
+            "buy",
+            "buy_to_cover",
+            "sell",
+            "sell_short",
+            "buy_to_open",
+            "buy_to_close",
+            "sell_to_open",
+            "sell_to_close",
+        ]
 
-        # Ensure there are exactly 2 legs
-        if len(legs) != 2:
-            raise ValueError("An OCO order must have exactly 2 legs.")
+        # Ensure the order class is valid
+        if order_class.lower() not in ["oco", "oto", "otoco"]:
+            raise ValueError(f"Invalid advanced order class '{order_class}'. Must be one of ['oco', 'oto', 'otoco']")
+
+        # Ensure there are exactly 2 legs for OTO and OTO orders. OTOCO (aka Bracket) order can have more than 2
+        if len(legs) != 2 and order_class.lower() in ["oto", "oto"]:
+            raise ValueError(f"An {order_class.upper()} order must have exactly 2 legs.")
 
         # Start constructing the data payload
         data = {
-            "class": "oco",
+            "class": order_class.lower(),
             "duration": duration.lower(),
         }
 
@@ -375,18 +400,10 @@ class Orders(TradierApiBase):
             if not isinstance(leg, OrderLeg):
                 raise ValueError(f"Leg at index {index} is not an OrderLeg object.")
 
-            if leg.side.lower() not in [
-                "buy",
-                "buy_to_cover",
-                "sell",
-                "sell_short",
-                "buy_to_open",
-                "buy_to_close",
-                "sell_to_open",
-                "sell_to_close",
-            ]:
+            if leg.side.lower() not in valid_sides:
                 raise ValueError(
-                    f"Invalid side for leg at index {index}. Must be one of ['buy_to_open', 'buy_to_close', 'sell_to_open', 'sell_to_close']"
+                    f"Invalid side for leg at index {index}. Must be one of "
+                    f"['buy_to_open', 'buy_to_close', 'sell_to_open', 'sell_to_close']"
                 )
 
             if not isinstance(leg.quantity, int) or leg.quantity <= 0:
