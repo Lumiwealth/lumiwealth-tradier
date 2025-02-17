@@ -17,7 +17,7 @@ class TestTradierApiBase:
         assert self.tradier_api_base is not None
 
     def test_non_retrying_request_raises_connection_error_quick(self):
-        t0 = time.time()
+        t0 = time.perf_counter()
         try:
             response = requests.get(
                 'http://localhost:9999',
@@ -27,7 +27,7 @@ class TestTradierApiBase:
         else:
             pass
         finally:
-            t1 = time.time()
+            t1 = time.perf_counter()
             actual = t1 - t0
             assert t1 - t0 < 1
 
