@@ -89,6 +89,14 @@ class TestOrders:
         assert resp
         assert resp['id'] == option_order['id']
 
+    def test_modify_order(self, tradier, mocker):
+        mocker.patch.object(tradier.orders, 'send', return_value={'order': {'id': 123, 'status': 'ok'}})
+        with pytest.raises(ValueError):
+            tradier.orders.modify(order_id=123, duration='bad_duration', limit_price=1.0)
+
+        res = tradier.orders.modify(order_id=123, stop_price=1.0)
+        assert res
+
     def test_option_order_multileg(self, tradier):
         from lumiwealth_tradier.orders import OrderLeg
 

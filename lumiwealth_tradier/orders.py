@@ -126,7 +126,7 @@ class Orders(TradierApiBase):
     def modify(
         self,
         order_id: int,
-        duration: str = "",
+        duration: str = "day",
         limit_price: Union[float, None] = None,
         stop_price: Union[float, None] = None,
     ) -> dict:
@@ -147,7 +147,7 @@ class Orders(TradierApiBase):
         }
         if duration:
             if duration.lower() not in self.valid_durations:
-                raise ValueError(f"Invalid duration. Must be one of {self.valid_durations}")
+                raise ValueError(f"Invalid duration '{duration}'). Must be one of {self.valid_durations}")
             payload["duration"] = duration.lower()
         if limit_price:
             payload["price"] = limit_price
@@ -382,8 +382,8 @@ class Orders(TradierApiBase):
         if order_class.lower() not in ["oco", "oto", "otoco"]:
             raise ValueError(f"Invalid advanced order class '{order_class}'. Must be one of ['oco', 'oto', 'otoco']")
 
-        # Ensure there are exactly 2 legs for OTO and OTO orders. OTOCO (aka Bracket) order can have more than 2
-        if len(legs) != 2 and order_class.lower() in ["oto", "oto"]:
+        # Ensure there are exactly 2 legs for OCO and OTO orders. OTOCO (aka Bracket) order can have more than 2
+        if len(legs) != 2 and order_class.lower() in ["oco", "oto"]:
             raise ValueError(f"An {order_class.upper()} order must have exactly 2 legs.")
 
         # Start constructing the data payload
