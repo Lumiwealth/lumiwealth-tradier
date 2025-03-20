@@ -126,7 +126,7 @@ class Orders(TradierApiBase):
     def modify(
         self,
         order_id: int,
-        duration: str = "day",
+        duration: str = "",
         limit_price: Union[float, None] = None,
         stop_price: Union[float, None] = None,
     ) -> dict:
