@@ -1,8 +1,8 @@
 import datetime as dt
 import json
-from typing import Union, List
 import logging
 from time import sleep
+from typing import List, Union
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -113,6 +113,11 @@ class TradierApiBase:
         # extra orders).
         # We use simple a for loop to catch cases when the request succeeds but there was no data.
         retry_attempts = DEFAULT_RETRY_ATTEMPTS if method == "get" else 1
+
+        # 502 is a common error code when the API is down for a few seconds so we ignore it too.
+        # 404 usually means the endpoint does not exist, but Tradier sometimes returns 404 for temporary errors.
+        temporary_codes = [502, 404]  # HTTP status codes that are considered temporary errors
+        success_codes = [200, 201]  # HTTP status codes for successful requests
         for retry_attempt in range(retry_attempts):
             r = None
             if method == "get":
@@ -133,8 +138,7 @@ class TradierApiBase:
                 raise ValueError(f"Invalid method {method}. Must be one of ['get', 'post', 'put', 'delete']")
 
             # Check for errors in response from Tradier API.
-            # 502 is a common error code when the API is down for a few seconds so we ignore it too.
-            if r.status_code != 200 and r.status_code != 201 and r.status_code != 502:
+            if r.status_code not in success_codes + temporary_codes:
                 raise TradierApiError(f"Error: {r.status_code} - {r.text}")
 
             # Parse the response from the Tradier API.  Sometimes no valid json is returned.
