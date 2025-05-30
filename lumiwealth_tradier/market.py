@@ -1,10 +1,10 @@
 import datetime as dt
-from typing import Union
 import logging
+from typing import Union
 
 import pandas as pd
 
-from .base import TradierApiBase, DEFAULT_RETRY_ATTEMPTS
+from .base import DEFAULT_RETRY_ATTEMPTS, TradierApiBase
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,8 @@ class MarketData(TradierApiBase):
         :return: DataFrame of quotes.  See Tradier weblink for column definitions.
         """
         # If any of the symbols contain ".", like "BRK.B", replace with "/"
-        symbols = [s.replace(".", "/") for s in symbols] if isinstance(symbols, list) else symbols.replace(".", "/")
+        symbols = [s.replace(".", "/") for s in symbols] \
+            if isinstance(symbols, list) else symbols.replace(".", "/")
 
         # Create payload
         symbols = symbols if isinstance(symbols, str) else ",".join(symbols)
