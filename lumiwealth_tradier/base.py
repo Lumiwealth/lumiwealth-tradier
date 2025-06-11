@@ -69,16 +69,18 @@ class TradierApiBase:
             return date.strftime(format_str)
         return date
 
-    def delete(self, endpoint, params=None, headers=None, data=None) -> dict:
+    def delete(self, endpoint, params=None, headers=None, data=None, required_response_key=None) -> dict:
         """
         This function makes a DELETE request to the Tradier API and returns a json object.
         :param endpoint:  Tradier API endpoint
         :param params:  Dictionary of requests.delete() parameters to pass to the endpoint
         :param headers:  Dictionary of requests.delete() headers to pass to the endpoint
         :param data:  Dictionary of requests.delete() data to pass to the endpoint
+        :param required_response_key: Optional key that must be in the data response else it retries the request
         :return:  json object
         """
-        return self.request(endpoint, params=params, headers=headers, data=data, method="delete")
+        return self.request(endpoint, params=params, headers=headers, data=data, method="delete",
+                            required_response_key=required_response_key)
 
     def request(
             self,
@@ -133,7 +135,7 @@ class TradierApiBase:
             elif method == "put":
                 r = requests.put(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
             elif method == "delete":
-                r = requests.delete(url=f"{self.base_url()}/{endpoint}", params=params, data=data, headers=headers)
+                r = requests.delete(url=f"{self.base_url()}/{endpoint}", params=params, headers=headers, data=data)
             else:
                 raise ValueError(f"Invalid method {method}. Must be one of ['get', 'post', 'put', 'delete']")
 
@@ -153,7 +155,8 @@ class TradierApiBase:
                     break
                 else:
                     if retry_attempt == retry_attempts - 1:
-                        logger.error(f"Response from {endpoint} did not contain {required_response_key}.")
+                        logger.error(f"Response from {endpoint} did not contain {required_response_key}. "
+                                     f"Response: {r.status_code} {ret_data}")
                     else:
                         logger.info(f"Response from {endpoint} did not contain {required_response_key}. Retrying...")
                         sleep(DEFAULT_RETRY_WAIT_SECONDS)
@@ -167,17 +170,20 @@ class TradierApiBase:
 
         return ret_data
 
-    def send(self, endpoint, data, headers=None, method="post") -> dict:
+    def send(self, endpoint, data, headers=None, method="post", required_response_key=None) -> dict:
         """
         This function sends a post request to the Tradier API and returns a json object.
         :param endpoint: Tradier API endpoint
         :param data: Dictionary of requests.post() data to pass to the endpoint
         :param headers: Dictionary of requests.post() headers to pass to the endpoint
+        :param method: 'post' or 'put'
+        :param required_response_key: Optional key that must be in the data response else it retries the request
         :return: json object
         """
         if method.lower() not in ["put", "post"]:
             raise ValueError(f"Invalid method {method}. Must be one of ['put', 'post']")
-        return self.request(endpoint, params={}, headers=headers, data=data, method=method.lower())
+        return self.request(endpoint, params={}, headers=headers, data=data, method=method.lower(),
+                            required_response_key=required_response_key)
 
     def requests_retry_session(
             self,

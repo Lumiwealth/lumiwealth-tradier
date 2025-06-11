@@ -244,3 +244,5 @@ class Account(TradierApiBase):
             if options:
                 positions_df = positions_df[positions_df["symbol"].str.len() > 5]
             return positions_df
+
+        return pd.DataFrame()

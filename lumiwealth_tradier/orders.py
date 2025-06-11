@@ -51,7 +51,7 @@ class Orders(TradierApiBase):
         """
 
         try:
-            response = self.delete(f"{self.ORDER_ENDPOINT}/{order_id}")
+            response = self.delete(f"{self.ORDER_ENDPOINT}/{order_id}", required_response_key='order')
         except TradierApiError as e:
             if "400 - order already in finalized state" in str(e):
                 return {"id": order_id, "status": "ok"}
@@ -73,7 +73,7 @@ class Orders(TradierApiBase):
             "includeTags": include_tag,
         }
         data = self.request(
-            endpoint=f"{self.ORDER_ENDPOINT}/{order_id}", params=payload
+            endpoint=f"{self.ORDER_ENDPOINT}/{order_id}", params=payload, required_response_key="order",
         )
         if "order" not in data:
             return pd.DataFrame()
@@ -154,7 +154,8 @@ class Orders(TradierApiBase):
         if stop_price:
             payload["stop"] = stop_price
 
-        response = self.send(f"{self.ORDER_ENDPOINT}/{order_id}", payload, method="put")
+        response = self.send(f"{self.ORDER_ENDPOINT}/{order_id}", payload, method="put",
+                             required_response_key="order")
         return response["order"]
 
     def order(
@@ -218,7 +219,7 @@ class Orders(TradierApiBase):
         }
         self._update_order_payload(payload, limit_price, order_type, stop_price, tag)
 
-        response = self.send(self.ORDER_ENDPOINT, payload)
+        response = self.send(self.ORDER_ENDPOINT, payload, required_response_key="order")
         return response["order"]
 
     def order_option(
@@ -268,7 +269,7 @@ class Orders(TradierApiBase):
         )
 
         # Send the request to the Tradier API
-        response = self.send(self.ORDER_ENDPOINT, payload, method="post")
+        response = self.send(self.ORDER_ENDPOINT, payload, method="post", required_response_key="order")
 
         # Return the response
         return response["order"]
@@ -337,7 +338,7 @@ class Orders(TradierApiBase):
             data[f"quantity[{index}]"] = int(leg.quantity)
 
         # Send the request to the Tradier API
-        response = self.send(self.ORDER_ENDPOINT, data)
+        response = self.send(self.ORDER_ENDPOINT, data, required_response_key="order")
 
         # Return the response
         return response["order"]
@@ -421,7 +422,7 @@ class Orders(TradierApiBase):
             data[f"type[{index}]"] = leg.type if leg.type else None
 
         # Send the request to the Tradier API
-        response = self.send(self.ORDER_ENDPOINT, data)
+        response = self.send(self.ORDER_ENDPOINT, data, required_response_key="order")
 
         # Return the response
         return response["order"]
