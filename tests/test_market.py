@@ -52,8 +52,8 @@ class TestMarket:
         # Get the quote for the option
         df = tradier.market.get_quotes([symbol])
         assert df is not None
-        assert 'last' in df.columns
-        assert df.loc[symbol]['last'] > 0
+        assert 'bid' in df.columns
+        assert df.loc[symbol]['bid'] > 0
 
     def test_historical_quote(self, tradier):
         # Multiple row return

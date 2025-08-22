@@ -16,9 +16,7 @@ DEFAULT_RETRY_ATTEMPTS = 3
 DEFAULT_RETRY_BACKOFF_FACTOR = 3.06
 DEFAULT_RETRY_WAIT_SECONDS = 3
 DEFAULT_CONNECTION_TIMEOUT = 10
-DEFAULT_RETRY_HTTP_STATUS_CODES: List[int] = [409, 429, 500, 502, 503, 504, 520, 530]
-# Don't retry these as they are not transient errors:
-# 401 - Unauthorized
+DEFAULT_RETRY_HTTP_STATUS_CODES: List[int] = [401, 409, 429, 500, 502, 503, 504, 520, 530]
 
 # https://urllib3.readthedocs.io/en/latest/reference/urllib3.util.html#urllib3.util.retry.Retry
 DEFAULT_ALLOWED_METHODS = frozenset(['GET'])
