@@ -44,6 +44,40 @@ class TradierApiBase:
 
         # Create a session object for retrying requests
         self._session = requests.Session()
+        self._configure_retry_session(self._session)
+
+    @staticmethod
+    def _configure_retry_session(
+        session: requests.Session,
+        retries: int = DEFAULT_RETRY_ATTEMPTS,
+        backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
+        status_forcelist: list[int] | None = None,
+        allowed_methods=DEFAULT_ALLOWED_METHODS,
+    ) -> requests.Session:
+        """Configure a requests Session with an HTTPAdapter using urllib3 Retry.
+
+        NOTE: `requests.Session.adapters` is an OrderedDict. Mutating adapters (via `session.mount`)
+        while another thread is iterating adapters can raise:
+            RuntimeError: OrderedDict mutated during iteration
+
+        To avoid this, we configure the shared session once during initialization and keep
+        `requests_retry_session()` idempotent for the default configuration.
+        """
+        if status_forcelist is None:
+            status_forcelist = DEFAULT_RETRY_HTTP_STATUS_CODES
+
+        retry = Retry(
+            total=retries,
+            read=retries,
+            connect=retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=status_forcelist,
+            allowed_methods=allowed_methods,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        return session
 
     def base_url(self):
         """
@@ -185,19 +219,24 @@ class TradierApiBase:
             allowed_methods=DEFAULT_ALLOWED_METHODS,
             session=None,
     ):
-        if status_forcelist is None:
-            status_forcelist = DEFAULT_RETRY_HTTP_STATUS_CODES
-            
-        session = session or self._session
-        retry = Retry(
-            total=retries,
-            read=retries,
-            connect=retries,
+        # Default configuration: return the already-configured shared session without remounting
+        # adapters. Remounting adapters is not thread-safe under concurrency.
+        if (
+            session is None
+            and retries == DEFAULT_RETRY_ATTEMPTS
+            and backoff_factor == DEFAULT_RETRY_BACKOFF_FACTOR
+            and status_forcelist is None
+            and allowed_methods == DEFAULT_ALLOWED_METHODS
+        ):
+            return self._session
+
+        # Non-default configuration: build a one-off session (or configure the provided session)
+        # so we don't mutate the shared session's adapters.
+        target_session = session or requests.Session()
+        return self._configure_retry_session(
+            target_session,
+            retries=retries,
             backoff_factor=backoff_factor,
             status_forcelist=status_forcelist,
             allowed_methods=allowed_methods,
         )
-        adapter = HTTPAdapter(max_retries=retry)
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
-        return session
