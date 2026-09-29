@@ -1,5 +1,6 @@
 import os
 
+import pandas as pd
 import pytest
 
 from lumiwealth_tradier.tradier import Tradier
@@ -22,3 +23,29 @@ class TestAccount:
         df = tradier.account.get_account_balance()
         assert df is not None
         assert 'total_cash' in df.columns
+
+    def test_get_history_handles_null_payload(self, tradier, monkeypatch):
+        monkeypatch.setattr(tradier.account, "request", lambda **_kwargs: {"history": "null"})
+        df = tradier.account.get_history()
+        assert isinstance(df, pd.DataFrame)
+        assert df.empty
+
+    def test_get_history_normalizes_single_event_object(self, tradier, monkeypatch):
+        monkeypatch.setattr(
+            tradier.account,
+            "request",
+            lambda **_kwargs: {
+                "history": {
+                    "event": {
+                        "id": "evt-1",
+                        "type": "ach",
+                        "date": "2026-03-27",
+                        "amount": "100.00",
+                    }
+                }
+            },
+        )
+        df = tradier.account.get_history()
+        assert isinstance(df, pd.DataFrame)
+        assert len(df.index) == 1
+        assert df.iloc[0]["id"] == "evt-1"

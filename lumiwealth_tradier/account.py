@@ -134,6 +134,7 @@ class Account(TradierApiBase):
         start_date: Union[dt.datetime, dt.date, str, None] = None,
         end_date: Union[dt.datetime, dt.date, str, None] = None,
         limit: Union[int, None] = None,  # Tradier default if not specified is only 25
+        page: Union[int, None] = None,
         activity_type: Union[str, None] = None,
         symbol: Union[str, None] = None,
     ) -> pd.DataFrame:
@@ -144,6 +145,7 @@ class Account(TradierApiBase):
             start_date (dt.datetime | dt.date | str | None, optional): Start date for history. Defaults to None.
             end_date (dt.datetime | dt.date | str | None, optional): End date for history. Defaults to None.
             limit (int | None, optional): Number of rows to return. Defaults to 25 in Tradier itself.
+            page (int | None, optional): Page number for paginated history requests.
             activity_type (str | None, optional): Type of activity to filter by. Valid values are:
                 trade, option, ach, wire, dividend, fee, tax, journal, check, transfer, adjustment, interest
             symbol (str | None, optional): Symbol to filter by. Defaults to None.
@@ -182,9 +184,22 @@ class Account(TradierApiBase):
 
         if limit:
             params["limit"] = limit
+        if page:
+            params["page"] = page
 
         data = self.request(endpoint=self.ACCOUNT_HISTORY_ENDPOINT, params=params)
-        return pd.json_normalize(data["history"]["event"])
+        history = data.get("history")
+        if not history or history == "null":
+            return pd.DataFrame()
+
+        events = history.get("event") if isinstance(history, dict) else None
+        if not events or events == "null":
+            return pd.DataFrame()
+
+        if not isinstance(events, list):
+            events = [events]
+
+        return pd.json_normalize(events)
 
     def get_positions(self, symbols=False, equities=False, options=False):
         """
